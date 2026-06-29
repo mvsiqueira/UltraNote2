@@ -1,0 +1,57 @@
+# Aplicação 3 de 3 — UltraNote (API + web).
+#
+# Modelo SEM build de imagem: usamos as imagens OFICIAIS (aspnet/nginx) e montamos
+# os arquivos já PUBLICADOS (gerados antes com `docker run ... dotnet publish`, ver
+# DEPLOY-QNAP.md §4). Isso evita o build dentro do Container Station, que falha porque
+# a rede de build padrão não tem internet pra baixar do NuGet.
+#
+# Pré-requisitos no NAS:
+#   /share/Container/ultranote-app/_out_api          (publish da API)
+#   /share/Container/ultranote-app/_out_web/wwwroot  (publish da web)
+#   /share/Container/ultranote-data  e  /share/Container/ultranote-assets  (volumes)
+#   rede "edge" criada (pelo app cloudflared)
+#
+# Rotas Cloudflare:
+#   note-api.ultrasoft.app.br -> http://app-note-api:8080
+#   note.ultrasoft.app.br     -> http://app-note-web:8080
+
+services:
+  app-note-api:
+    image: mcr.microsoft.com/dotnet/aspnet:10.0
+    container_name: app-note-api
+    working_dir: /app
+    command: ["dotnet", "UltraNote.Api.dll"]
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__Db=Data Source=/data/ultranote.db
+      - Storage__AssetsPath=/assets
+      - Auth__Enabled=true
+      - Auth__GoogleClientId=465011248657-u7febuihd7f4s0j551pp38aaq1sfevn4.apps.googleusercontent.com
+      - Auth__AllowedEmails__0=negrume@gmail.com
+    volumes:
+      - /share/Container/ultranote-app/_out_api:/app
+      - /share/Container/ultranote-data:/data
+      - /share/Container/ultranote-assets:/assets
+    restart: unless-stopped
+    expose:
+      - "8080"
+    networks:
+      - edge
+
+  app-note-web:
+    image: nginx:alpine
+    container_name: app-note-web
+    volumes:
+      - /share/Container/ultranote-app/_out_web/wwwroot:/usr/share/nginx/html:ro
+      - /share/Container/ultranote-app/UltraNote.Web/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+    expose:
+      - "8080"
+    networks:
+      - edge
+
+networks:
+  edge:
+    external: true
+    name: edge

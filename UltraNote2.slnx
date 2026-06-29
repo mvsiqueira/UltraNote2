@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="UltraNote.Api/UltraNote.Api.csproj" />
+  <Project Path="UltraNote.Client/UltraNote.Client.csproj" />
+  <Project Path="UltraNote.Core/UltraNote.Core.csproj" />
+  <Project Path="UltraNote.UI/UltraNote.UI.csproj" />
+  <Project Path="UltraNote.Web/UltraNote.Web.csproj" />
+</Solution>

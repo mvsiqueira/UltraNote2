@@ -1,0 +1,171 @@
+@inject IUltraNoteApi Api
+@inject IJSRuntime JS
+
+<div class="app-shell">
+    <aside class="sidebar">
+        <header class="brand">
+            <strong>UltraNote</strong>
+            <div class="button-row">
+                <button class="icon-button" title="Nova pasta" @onclick="NewRootFolder">+ Pasta</button>
+            </div>
+        </header>
+        <div class="folder-list">
+            @foreach (var f in _folders)
+            {
+                var depth = string.IsNullOrEmpty(f.Path) ? 0 : f.Path.Split('/').Length - 1;
+                <div class="folder-row @(f.Id == _selectedFolderId ? "active" : "")"
+                     style="padding-left:@(8 + depth * 14)px"
+                     @onclick="() => SelectFolder(f.Id)">
+                    <span class="folder-name">@f.Name</span>
+                    <span class="folder-actions">
+                        <button title="Nova subpasta" @onclick:stopPropagation="true" @onclick="() => NewSubFolder(f.Id)">+</button>
+                        <button title="Excluir" @onclick:stopPropagation="true" @onclick="() => DeleteFolder(f)">🗑</button>
+                    </span>
+                </div>
+            }
+            @if (_folders.Count == 0)
+            {
+                <p class="empty">Crie sua primeira pasta.</p>
+            }
+        </div>
+    </aside>
+
+    <section class="note-list-panel">
+        <div class="section-bar">
+            <span>Notas</span>
+            <button class="icon-button" title="Nova nota" disabled="@(_selectedFolderId is null)" @onclick="NewNote">+ Nota</button>
+        </div>
+        <div class="note-list">
+            @foreach (var n in _notes)
+            {
+                <div class="note-item @(n.Id == _selectedNote?.Id ? "active" : "")" @onclick="() => SelectNote(n.Id)">
+                    <strong>@n.Title</strong>
+                    <span>@n.UpdatedAt.ToLocalTime().ToString("g")</span>
+                </div>
+            }
+            @if (_selectedFolderId is not null && _notes.Count == 0)
+            {
+                <p class="empty">Nenhuma nota nesta pasta.</p>
+            }
+        </div>
+    </section>
+
+    <section class="editor-panel">
+        @if (_selectedNote is not null)
+        {
+            <div class="editor-header">
+                <input class="title-input" @bind="_title" @bind:event="oninput" />
+                <button class="save-button" @onclick="SaveNote">@(_dirty ? "Salvar *" : "Salvar")</button>
+            </div>
+            <RichTextEditor @ref="_editor" Html="@_selectedNote.ContentHtml" OnChanged="MarkDirty" />
+        }
+        else
+        {
+            <div class="editor-empty">
+                <p>Selecione ou crie uma nota para começar.</p>
+            </div>
+        }
+        <footer class="status-bar">@_status</footer>
+    </section>
+</div>
+
+@code {
+    private IReadOnlyList<FolderDto> _folders = [];
+    private IReadOnlyList<NoteSummaryDto> _notes = [];
+    private Guid? _selectedFolderId;
+    private NoteDto? _selectedNote;
+    private RichTextEditor? _editor;
+    private string _title = "";
+    private bool _dirty;
+    private string _status = "Pronto.";
+
+    protected override async Task OnInitializedAsync() => await LoadFolders();
+
+    private async Task LoadFolders()
+    {
+        try
+        {
+            _folders = await Api.GetFoldersAsync();
+        }
+        catch (Exception ex)
+        {
+            _status = $"Erro ao carregar pastas: {ex.Message}";
+        }
+    }
+
+    private async Task SelectFolder(Guid id)
+    {
+        _selectedFolderId = id;
+        _selectedNote = null;
+        await LoadNotes();
+    }
+
+    private async Task LoadNotes()
+    {
+        if (_selectedFolderId is not { } id) { _notes = []; return; }
+        _notes = await Api.GetNotesAsync(id);
+    }
+
+    private async Task NewRootFolder() => await CreateFolder(null);
+    private async Task NewSubFolder(Guid parentId) => await CreateFolder(parentId);
+
+    private async Task CreateFolder(Guid? parentId)
+    {
+        var name = await Prompt("Nome da pasta:");
+        if (string.IsNullOrWhiteSpace(name)) return;
+        var created = await Api.CreateFolderAsync(new CreateFolderRequest(parentId, name));
+        await LoadFolders();
+        _status = $"Pasta criada: {created.Name}";
+    }
+
+    private async Task DeleteFolder(FolderDto f)
+    {
+        if (!await Confirm($"Excluir a pasta \"{f.Name}\" e todo o seu conteúdo?")) return;
+        await Api.DeleteFolderAsync(f.Id);
+        if (_selectedFolderId == f.Id) { _selectedFolderId = null; _notes = []; _selectedNote = null; }
+        await LoadFolders();
+        _status = $"Pasta excluída: {f.Name}";
+    }
+
+    private async Task NewNote()
+    {
+        if (_selectedFolderId is not { } folderId) return;
+        var title = await Prompt("Título da nota:");
+        if (string.IsNullOrWhiteSpace(title)) return;
+        var note = await Api.CreateNoteAsync(new CreateNoteRequest(folderId, title, "<p></p>"));
+        await LoadNotes();
+        await SelectNote(note.Id);
+        _status = $"Nota criada: {note.Title}";
+    }
+
+    private async Task SelectNote(Guid id)
+    {
+        _selectedNote = await Api.GetNoteAsync(id);
+        _title = _selectedNote?.Title ?? "";
+        _dirty = false;
+        _status = _selectedNote is null ? "Nota não encontrada." : $"Editando: {_selectedNote.Title}";
+    }
+
+    private void MarkDirty()
+    {
+        if (!_dirty) { _dirty = true; StateHasChanged(); }
+    }
+
+    private async Task SaveNote()
+    {
+        if (_selectedNote is null || _editor is null) return;
+        var html = await _editor.GetHtmlAsync();
+        var updated = await Api.UpdateNoteAsync(_selectedNote.Id,
+            new UpdateNoteRequest(_title, html, null));
+        _selectedNote = updated;
+        _dirty = false;
+        await LoadNotes();
+        _status = $"Salvo: {updated.Title}";
+    }
+
+    private async Task<string?> Prompt(string message) =>
+        await JS.InvokeAsync<string?>("prompt", message);
+
+    private async Task<bool> Confirm(string message) =>
+        await JS.InvokeAsync<bool>("confirm", message);
+}

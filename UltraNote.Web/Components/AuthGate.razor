@@ -1,0 +1,43 @@
+@using UltraNote.Web.Auth
+@implements IDisposable
+@inject GoogleAuthService Auth
+
+@if (Auth.IsAuthenticated)
+{
+    @ChildContent
+    @if (Auth.IsEnabled)
+    {
+        <div class="user-chip">
+            <span title="@Auth.Email">@(Auth.Name ?? Auth.Email)</span>
+            <button @onclick="SignOut">Sair</button>
+        </div>
+    }
+}
+else
+{
+    <div class="login-screen">
+        <div class="login-card">
+            <h1>UltraNote</h1>
+            <p>Entre com sua conta Google para acessar suas notas.</p>
+            <div id="google-signin-button"></div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    protected override void OnInitialized() => Auth.OnChange += OnAuthChanged;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && Auth.IsEnabled && !Auth.IsAuthenticated)
+            await Auth.RenderButtonAsync("google-signin-button");
+    }
+
+    private void OnAuthChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task SignOut() => await Auth.SignOutAsync();
+
+    public void Dispose() => Auth.OnChange -= OnAuthChanged;
+}

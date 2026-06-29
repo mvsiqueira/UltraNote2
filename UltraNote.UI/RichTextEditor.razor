@@ -1,0 +1,84 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@*
+  First-cut rich-text editor: a contenteditable surface driven by a small JS module.
+  Deliberately isolated so it can be swapped for the TipTap-based editor (the asset we
+  want to reuse from the original app) without touching NotesApp.
+*@
+
+<div class="rte">
+    <div class="rte-toolbar">
+        <button type="button" title="Negrito" @onclick='() => Exec("bold")'><b>B</b></button>
+        <button type="button" title="Itálico" @onclick='() => Exec("italic")'><i>I</i></button>
+        <button type="button" title="Tachado" @onclick='() => Exec("strikeThrough")'><s>S</s></button>
+        <span class="rte-sep"></span>
+        <button type="button" title="Lista" @onclick='() => Exec("insertUnorderedList")'>• Lista</button>
+        <button type="button" title="Lista numerada" @onclick='() => Exec("insertOrderedList")'>1. Lista</button>
+        <span class="rte-sep"></span>
+        <button type="button" title="Link" @onclick="InsertLink">🔗</button>
+    </div>
+    <div @ref="_surface" class="rte-surface" contenteditable="true"></div>
+</div>
+
+@code {
+    private ElementReference _surface;
+    private IJSObjectReference? _module;
+    private string? _lastApplied;
+
+    /// <summary>Content to display. Changing it (e.g. switching notes) re-loads the surface.</summary>
+    [Parameter] public string? Html { get; set; }
+
+    /// <summary>Raised whenever the user edits the content.</summary>
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/UltraNote.UI/ultranote-editor.js");
+            await _module.InvokeVoidAsync("attach", _surface,
+                DotNetObjectReference.Create(this));
+        }
+
+        // Sync external content into the surface (skips while the user is the source of truth).
+        if (_module is not null && Html != _lastApplied)
+        {
+            _lastApplied = Html;
+            await _module.InvokeVoidAsync("setHtml", _surface, Html ?? string.Empty);
+        }
+    }
+
+    public async Task<string> GetHtmlAsync() =>
+        _module is null ? string.Empty : await _module.InvokeAsync<string>("getHtml", _surface);
+
+    private async Task Exec(string command)
+    {
+        if (_module is null) return;
+        await _module.InvokeVoidAsync("exec", _surface, command, (string?)null);
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task InsertLink()
+    {
+        if (_module is null) return;
+        var url = await JS.InvokeAsync<string>("prompt", "URL do link:");
+        if (!string.IsNullOrWhiteSpace(url))
+        {
+            await _module.InvokeVoidAsync("exec", _surface, "createLink", url);
+            await OnChanged.InvokeAsync();
+        }
+    }
+
+    [JSInvokable]
+    public Task NotifyChanged() => OnChanged.InvokeAsync();
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is not null)
+        {
+            try { await _module.DisposeAsync(); } catch (JSDisconnectedException) { }
+        }
+    }
+}

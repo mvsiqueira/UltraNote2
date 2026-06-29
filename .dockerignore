@@ -1,0 +1,18 @@
+# Build outputs
+**/bin/
+**/obj/
+
+# Local runtime data
+**/*.db
+**/*.db-shm
+**/*.db-wal
+UltraNote.Api/assets/
+
+# VCS / IDE / docs
+.git/
+.vs/
+.claude/
+*.md
+
+# Secrets (never bake into an image)
+client_secret*.json
