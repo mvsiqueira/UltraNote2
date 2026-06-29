@@ -1,40 +1,48 @@
-// Google Identity Services (GIS) wrapper. Loads the GIS script on demand, initializes it
-// with the OAuth client id, and renders the "Sign in with Google" button. On success it
-// hands the ID token back to .NET (GoogleAuthService.OnCredential).
+// Google Identity Services wrapper with login persistence.
+// - The ID token is kept in localStorage so a page refresh doesn't require re-login.
+// - auto_select lets GIS silently re-issue a token (no click) when the Google session is
+//   still active, covering the ~1h token expiry.
 
 let dotnetRef = null;
+const KEY = "ultranote-gid";
 
-export async function init(ref, clientId, buttonElementId) {
+export async function init(ref, clientId, autoSelect) {
     dotnetRef = ref;
-    await loadGisScript();
-
+    await loadGis();
     google.accounts.id.initialize({
         client_id: clientId,
-        callback: (response) => {
-            dotnetRef.invokeMethodAsync("OnCredential", response.credential);
+        auto_select: !!autoSelect,
+        use_fedcm_for_prompt: true,
+        callback: (resp) => {
+            try { localStorage.setItem(KEY, resp.credential); } catch (e) { }
+            dotnetRef.invokeMethodAsync("OnCredential", resp.credential);
         },
     });
+}
 
-    const el = document.getElementById(buttonElementId);
-    if (el) {
-        google.accounts.id.renderButton(el, {
-            theme: "outline",
-            size: "large",
-            text: "signin_with",
-            shape: "pill",
-        });
+export function renderButton(elId) {
+    const el = document.getElementById(elId);
+    if (el && window.google?.accounts?.id) {
+        google.accounts.id.renderButton(el, { theme: "outline", size: "large", text: "signin_with", shape: "pill" });
     }
-    // One Tap (prompt) is intentionally not auto-shown — the explicit button is the
-    // reliable path and avoids FedCM noise when there is no active Google session.
+}
+
+// Attempts a silent (One Tap / auto-select) sign-in. Fires the callback if Google can
+// issue a token without user interaction; otherwise it's a no-op / shows One Tap.
+export function promptSilent() {
+    if (window.google?.accounts?.id) google.accounts.id.prompt();
+}
+
+export function getStored() {
+    try { return localStorage.getItem(KEY); } catch (e) { return null; }
 }
 
 export function signOut() {
-    if (window.google?.accounts?.id) {
-        google.accounts.id.disableAutoSelect();
-    }
+    try { localStorage.removeItem(KEY); } catch (e) { }
+    if (window.google?.accounts?.id) google.accounts.id.disableAutoSelect();
 }
 
-function loadGisScript() {
+function loadGis() {
     return new Promise((resolve, reject) => {
         if (window.google?.accounts?.id) { resolve(); return; }
         const s = document.createElement("script");

@@ -25,8 +25,11 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && Auth.IsEnabled && !Auth.IsAuthenticated)
-            await Auth.RenderButtonAsync("google-signin-button");
+        if (!firstRender || !Auth.IsEnabled) return;
+
+        await Auth.InitAsync();                                  // restore cached token (no UI)
+        if (!Auth.IsAuthenticated)
+            await Auth.RenderButtonAndSilentAsync("google-signin-button");
     }
 
     private void OnAuthChanged() => InvokeAsync(StateHasChanged);

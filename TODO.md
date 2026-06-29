@@ -36,9 +36,20 @@ Backlog de evolução. Marque `[x]` ao concluir. Prioridade sugerida de cima par
 - [ ] Indicador de "salvando…/salvo".
 - [ ] Atalhos de teclado (Ctrl+S salvar, etc.).
 
+## 3b. Multiusuário (segregação de dados)
+
+> Hoje o app é **single-user**: a allowlist controla quem entra, mas os dados são uma
+> biblioteca única compartilhada (sem dono). Para abrir a vários usuários com dados
+> separados, plano em 5 passos:
+- [ ] Adicionar `OwnerId` em `Folder` e `Note` (Attachment herda via nota) + migration.
+- [ ] Capturar a identidade do token Google (claim `sub`) como `OwnerId`; guardar e-mail/nome p/ exibir.
+- [ ] Filtrar **toda** consulta por `OwnerId` e checar posse em get/update/delete (403 se não for dono).
+- [ ] Trocar a allowlist de e-mail por "qualquer conta Google" (ou tabela de usuários).
+- [ ] Migração: criar a coluna e backfill das notas existentes com o OwnerId atual.
+
 ## 4. Autenticação / sessão
 
-- [ ] **Persistir / renovar o token** Google na web (ID token expira ~1h → hoje exige novo login). Avaliar One Tap silencioso ou refresh.
+- [x] **Persistir / renovar o token** Google na web — token em localStorage (sobrevive a refresh) + auto-select silencioso renovando antes de expirar.
 - [ ] Restringir **CORS** da API para `https://note.ultrasoft.app.br` (hoje libera qualquer origem).
 - [ ] (Opcional) **Cloudflare Access** como camada extra na URL da web.
 
