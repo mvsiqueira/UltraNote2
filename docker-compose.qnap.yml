@@ -33,6 +33,12 @@ services:
       - /share/Container/ultranote-app/_out_api:/app
       - /share/Container/ultranote-data:/data
       - /share/Container/ultranote-assets:/assets
+    # DNS explícito: sem isto o container não resolve accounts.google.com /
+    # www.googleapis.com e não baixa as chaves p/ validar o token (erro "signature key
+    # was not found"). Mesma necessidade do cloudflared neste NAS.
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     restart: unless-stopped
     expose:
       - "8080"

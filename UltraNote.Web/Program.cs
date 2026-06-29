@@ -14,7 +14,10 @@ var apiBaseUrl = builder.Configuration["ApiBaseUrl"];
 if (string.IsNullOrWhiteSpace(apiBaseUrl))
     apiBaseUrl = builder.HostEnvironment.BaseAddress;
 
-builder.Services.AddScoped<GoogleAuthService>();
+// Singleton (not scoped): the IHttpClientFactory builds BearerTokenHandler in its own DI
+// scope, so a scoped GoogleAuthService would be a DIFFERENT instance than the UI's — the
+// handler would never see the token set at login. Singleton guarantees one shared instance.
+builder.Services.AddSingleton<GoogleAuthService>();
 builder.Services.AddScoped<BearerTokenHandler>();
 
 // API client with the Google bearer token attached to every request.
