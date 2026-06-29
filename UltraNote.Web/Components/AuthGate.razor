@@ -5,18 +5,12 @@
 @if (Auth.IsAuthenticated)
 {
     @ChildContent
-    @if (Auth.IsEnabled)
-    {
-        <div class="user-chip">
-            <span title="@Auth.Email">@(Auth.Name ?? Auth.Email)</span>
-            <button @onclick="SignOut">Sair</button>
-        </div>
-    }
 }
 else
 {
     <div class="login-screen">
         <div class="login-card">
+            <i class="ti ti-notebook" aria-hidden="true"></i>
             <h1>UltraNote</h1>
             <p>Entre com sua conta Google para acessar suas notas.</p>
             <div id="google-signin-button"></div>
@@ -36,8 +30,6 @@ else
     }
 
     private void OnAuthChanged() => InvokeAsync(StateHasChanged);
-
-    private async Task SignOut() => await Auth.SignOutAsync();
 
     public void Dispose() => Auth.OnChange -= OnAuthChanged;
 }

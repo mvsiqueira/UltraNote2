@@ -1,0 +1,39 @@
+@* Recursive tree node: a folder row, then (when expanded) its subfolders and its notes. *@
+
+<div class="tree-row" style="padding-left:@(8 + Depth * 15)px"
+     @onclick="() => Owner.ToggleFolder(Folder)"
+     @oncontextmenu:preventDefault="true"
+     @oncontextmenu="(e) => Owner.OpenFolderMenu(Folder, e)">
+    <i class="ti @(Owner.IsExpanded(Folder.Id) ? "ti-chevron-down" : "ti-chevron-right") chevron" aria-hidden="true"></i>
+    <i class="ti ti-folder folder-ico" aria-hidden="true"></i>
+    <span class="tree-label">@Folder.Name</span>
+</div>
+
+@if (Owner.IsExpanded(Folder.Id))
+{
+    @foreach (var child in Owner.ChildrenOf(Folder.Id))
+    {
+        <TreeNode Folder="child" Depth="Depth + 1" />
+    }
+
+    @if (Owner.NotesOf(Folder.Id) is { } notes)
+    {
+        @foreach (var note in notes)
+        {
+            <div class="tree-note @(note.Id == Owner.SelectedNoteId ? "active" : "")"
+                 style="padding-left:@(8 + (Depth + 1) * 15 + 4)px"
+                 @onclick="() => Owner.SelectNote(note.Id)"
+                 @oncontextmenu:preventDefault="true"
+                 @oncontextmenu="(e) => Owner.OpenNoteMenu(note, e)">
+                <i class="ti ti-file-text note-ico" aria-hidden="true"></i>
+                <span class="tree-label">@note.Title</span>
+            </div>
+        }
+    }
+}
+
+@code {
+    [CascadingParameter] public NotesApp Owner { get; set; } = default!;
+    [Parameter] public FolderDto Folder { get; set; } = default!;
+    [Parameter] public int Depth { get; set; }
+}

@@ -1,8 +1,24 @@
 @page "/"
 @using UltraNote.Web.Components
+@using UltraNote.Web.Auth
+@inject GoogleAuthService Auth
 
 <PageTitle>UltraNote</PageTitle>
 
 <AuthGate>
-    <NotesApp />
+    <NotesApp TopBarUser="@UserChip" />
 </AuthGate>
+
+@code {
+    private RenderFragment UserChip => @<text>
+        @if (Auth.IsEnabled)
+        {
+            <div class="user-chip">
+                <span class="user-name" title="@Auth.Email">@(Auth.Name ?? Auth.Email)</span>
+                <button class="icon-btn" title="Sair" @onclick="SignOut"><i class="ti ti-logout" aria-hidden="true"></i></button>
+            </div>
+        }
+    </text>;
+
+    private async Task SignOut() => await Auth.SignOutAsync();
+}

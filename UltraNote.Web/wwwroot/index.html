@@ -7,10 +7,20 @@
     <title>UltraNote</title>
     <base href="/" />
     <link rel="preload" id="webassembly" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css" />
     <link rel="stylesheet" href="_content/UltraNote.UI/ultranote.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link href="UltraNote.Web.styles.css" rel="stylesheet" />
     <script type="importmap"></script>
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('ultranote-theme')
+                    || ((window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', t);
+            } catch (e) { }
+        })();
+    </script>
 </head>
 
 <body>
