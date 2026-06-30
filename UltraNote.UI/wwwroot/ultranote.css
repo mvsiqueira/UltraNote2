@@ -225,7 +225,12 @@ html, body {
 .rte-toolbar button:hover { background: var(--hover); color: var(--text); }
 .rte-sep { width: 1px; height: 18px; background: var(--border); margin: 0 4px; }
 
-.rte-surface {
+/* TipTap mounts its own contenteditable INSIDE the element we give it (.rte-surface is
+   just the flex container; .rte-prosemirror is the class TipTap applies to that inner
+   contenteditable via editorProps.attributes). */
+.rte-surface { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+
+.rte-prosemirror {
   flex: 1;
   overflow-y: auto;
   padding: 18px 22px;
@@ -234,10 +239,104 @@ html, body {
   font-size: 15px;
   color: var(--text);
 }
-.rte-surface table { border-collapse: collapse; }
-.rte-surface td, .rte-surface th { border: 1px solid var(--border); padding: 6px 10px; }
-.rte-surface a { color: var(--accent); }
-.rte-surface h1, .rte-surface h2, .rte-surface h3 { color: var(--text); }
+.rte-prosemirror p { margin: 0 0 8px; }
+.rte-prosemirror ul, .rte-prosemirror ol { margin: 0 0 8px; padding-left: 1.3em; }
+.rte-prosemirror li { margin: 0 0 4px; }
+.rte-prosemirror h1, .rte-prosemirror h2, .rte-prosemirror h3 { color: var(--text); line-height: 1.25; }
+.rte-prosemirror a { color: var(--accent); }
+
+.rte-prosemirror p[data-indent="1"], .rte-prosemirror li[data-indent="1"] { margin-left: 24px; }
+.rte-prosemirror p[data-indent="2"], .rte-prosemirror li[data-indent="2"] { margin-left: 48px; }
+.rte-prosemirror p[data-indent="3"], .rte-prosemirror li[data-indent="3"] { margin-left: 72px; }
+.rte-prosemirror p[data-indent="4"], .rte-prosemirror li[data-indent="4"] { margin-left: 96px; }
+.rte-prosemirror p[data-indent="5"], .rte-prosemirror li[data-indent="5"] { margin-left: 120px; }
+.rte-prosemirror p[data-indent="6"], .rte-prosemirror li[data-indent="6"] { margin-left: 144px; }
+
+.rte-prosemirror p.is-editor-empty:first-child::before {
+  color: var(--muted);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.rte-prosemirror table { border-collapse: collapse; margin: 14px 0; table-layout: fixed; width: 100%; }
+.rte-prosemirror .tableWrapper { overflow-x: auto; }
+.rte-prosemirror td, .rte-prosemirror th {
+  position: relative;
+  border: 1px solid var(--border);
+  min-width: 1em;
+  padding: 6px 10px;
+  vertical-align: top;
+}
+.rte-prosemirror td > *, .rte-prosemirror th > * { overflow-wrap: anywhere; }
+.rte-prosemirror th { background: var(--hover); font-weight: 500; }
+
+.rte-prosemirror .column-resize-handle {
+  position: absolute;
+  top: 0; right: -2px; bottom: -2px;
+  width: 4px;
+  background: var(--accent);
+  pointer-events: none;
+}
+
+.rte-prosemirror tr.row-resize-hover > td, .rte-prosemirror tr.row-resize-hover > th,
+.rte-prosemirror tr.row-resize-active > td, .rte-prosemirror tr.row-resize-active > th {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.row-resize-guide { position: fixed; z-index: 80; height: 2px; background: var(--accent); border-radius: 1px; pointer-events: none; }
+
+body.row-resize-cursor, body.row-resize-cursor * { cursor: row-resize !important; }
+.rte-prosemirror.resize-cursor { cursor: col-resize; }
+
+/* ---------- Toolbar color swatches ---------- */
+.color-swatch { position: relative; }
+.color-swatch-btn span {
+  display: inline-block;
+  font-weight: 600;
+  line-height: 1;
+  padding-bottom: 2px;
+}
+.color-swatch-btn .font-indicator { border-bottom: 3px solid currentColor; }
+.color-swatch-btn .highlight-indicator { padding: 1px 3px; border-radius: 3px; }
+
+.color-palette {
+  position: absolute;
+  top: 38px;
+  left: 0;
+  z-index: 100;
+  display: grid;
+  grid-template-columns: repeat(6, 24px);
+  gap: 6px;
+  padding: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+.swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  padding: 0;
+}
+.custom-color {
+  position: relative;
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+}
+.custom-color input { position: absolute; inset: 0; opacity: 0; cursor: pointer; border: none; }
 
 /* ---------- Menus (contexto / novo) ---------- */
 .menu-backdrop { position: fixed; inset: 0; z-index: 90; }

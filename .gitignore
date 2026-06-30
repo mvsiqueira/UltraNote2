@@ -18,5 +18,9 @@ UltraNote.Api/assets/
 # Publish output (gerado no deploy; não versionar)
 _out_*/
 
+# Editor JS source deps (npm) — o BUNDLE compilado em wwwroot/ultranote-editor.js
+# É versionado (o NAS não roda npm). Rebuild local: cd UltraNote.UI/editor-src && npm run build
+UltraNote.UI/editor-src/node_modules/
+
 # Secrets — Google OAuth client secret is NOT needed by the app (GIS uses only the public client id)
 client_secret*.json

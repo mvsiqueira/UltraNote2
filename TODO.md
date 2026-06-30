@@ -14,13 +14,13 @@ Backlog de evolução. Marque `[x]` ao concluir. Prioridade sugerida de cima par
 
 ## 1. Editor (o coração — reaproveitar o do app original)
 
-- [ ] Migrar o editor de `contenteditable` para **TipTap** (`UltraNote.UI/RichTextEditor.razor` + `wwwroot/ultranote-editor.js`).
-  - [ ] Configurar **bundling de JS** (npm + esbuild/rollup) no projeto `UltraNote.UI`.
-  - [ ] Tabelas com **resize de linha/coluna**.
-  - [ ] **Cores** de fonte e **realce** (highlight).
-  - [ ] **Indentação** (aumentar/diminuir recuo).
-  - [ ] Menus de contexto (formatação + tabela).
-- [ ] **Colar imagem** no editor → upload via API de anexos → embutir no HTML (a API já suporta anexos; falta o front usar).
+- [x] Migrar o editor de `contenteditable` para **TipTap** (`UltraNote.UI/RichTextEditor.razor` + `editor-src/main.js` → bundle em `wwwroot/ultranote-editor.js`).
+  - [x] **Bundling de JS** (npm + esbuild) em `UltraNote.UI/editor-src/` — bundle minificado é **commitado** (o NAS não roda npm); rebuild local: `cd UltraNote.UI/editor-src && npm run build`.
+  - [x] Tabelas com **resize de linha** (drag custom, portado do app original) **e coluna** (recurso nativo do TipTap).
+  - [x] **Cores** de fonte e **realce** (highlight), com paleta + seletor de cor customizada.
+  - [x] **Indentação** (aumentar/diminuir recuo, `data-indent` attribute).
+  - [x] Menu de contexto (botão direito): formatação sempre; operações de tabela só dentro de uma tabela.
+- [ ] **Colar imagem** no editor → upload via API de anexos → embutir no HTML (a API já suporta anexos; falta o front usar). Não fazia parte do app original — feature nova.
 
 ## 2. Gestão de notas e pastas (API já suporta; falta UI)
 

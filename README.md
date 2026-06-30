@@ -6,7 +6,8 @@ qualquer lugar.
 
 **Status:** web **no ar** em `https://note.ultrasoft.app.br` (login Google), API em
 `https://note-api.ultrasoft.app.br`, hospedadas no QNAP via Docker + Cloudflare Tunnel.
-App Windows (Blazor Hybrid) e a migração do editor para TipTap são os próximos passos.
+Editor rico (TipTap) com tabelas, cores e indentação. App Windows (Blazor Hybrid) é o
+próximo passo.
 
 ## Projetos
 
@@ -15,14 +16,25 @@ App Windows (Blazor Hybrid) e a migração do editor para TipTap são os próxim
 | `UltraNote.Core` | Modelos (entidades) e DTOs do contrato da API | ✅ |
 | `UltraNote.Api` | Web API (EF Core + SQLite) + auth Google (flag) | ✅ |
 | `UltraNote.Client` | Cliente HTTP tipado (desktop + web) | ✅ |
-| `UltraNote.UI` | Componentes Razor compartilhados + editor | ✅ (editor = 1ª versão, ver nota) |
+| `UltraNote.UI` | Componentes Razor compartilhados + editor TipTap | ✅ |
 | `UltraNote.Web` | Versão web (Blazor WASM) + login Google | ✅ roda, fala com a API e tem "Entrar com Google" |
 | `UltraNote.Desktop` | App Windows (MAUI Blazor Hybrid) | ⏳ (requer workload `maui`) |
 
-> **Editor**: a 1ª versão usa um `contenteditable` simples (negrito/itálico/listas/link via
-> `execCommand`), isolado em `UltraNote.UI/RichTextEditor.razor` + `wwwroot/ultranote-editor.js`.
-> A troca pelo **TipTap** (reaproveitando o editor do app original) é um passo focado: só
-> esses dois arquivos mudam.
+## Editor (TipTap)
+
+`UltraNote.UI/RichTextEditor.razor` (toolbar, paletas de cor, menu de contexto) +
+`UltraNote.UI/editor-src/main.js` (TipTap: StarterKit, cor, realce, indentação, link,
+tabelas com resize de linha/coluna — porta o editor do app Tauri original). O JS é
+**bundlado com esbuild** e o resultado **commitado** em `wwwroot/ultranote-editor.js`
+(o ambiente de deploy no NAS não roda npm).
+
+Mudou algo em `editor-src/`? Rebuild antes de commitar:
+
+```powershell
+cd UltraNote.UI/editor-src
+npm install   # só na 1ª vez / quando mudar dependências
+npm run build
+```
 
 ## Rodar a API localmente
 
