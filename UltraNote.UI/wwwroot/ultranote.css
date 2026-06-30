@@ -291,8 +291,20 @@ html, body {
 }
 
 .modal-card h2 { margin: 0 0 8px; font-size: 16px; }
-.modal-card p { margin: 0 0 18px; font-size: 13px; color: var(--text-2); line-height: 1.6; }
-.modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.modal-card p { margin: 0 0 14px; font-size: 13px; color: var(--text-2); line-height: 1.6; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+
+.modal-select {
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+}
+.modal-select:focus { border-color: var(--accent); outline: none; }
 
 .btn-ghost, .btn-danger {
   border: 1px solid var(--border);

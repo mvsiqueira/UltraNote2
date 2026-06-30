@@ -27,14 +27,14 @@ Backlog de evolução. Marque `[x]` ao concluir. Prioridade sugerida de cima par
 - [x] **Excluir nota** — menu de contexto.
 - [x] **Renomear pasta** — menu de contexto.
 - [x] **Buscar** notas (por título) — caixa de busca na barra superior.
-- [ ] **Mover** nota/pasta (ação de mover ou drag-drop) — falta também renomear/excluir **nota** com nome próprio de pasta vs. mover entre pastas.
+- [x] **Mover** nota/pasta — menu de contexto "Mover...", modal com seletor de destino (pastas descendentes excluídas para evitar ciclo).
 
 ## 3. UX e robustez
 
 - [x] **Guarda de alterações não salvas** — modal de confirmação ao trocar de nota com edição pendente (cancelar/descartar), + aviso nativo do navegador ao fechar/recarregar a aba.
 - [x] **Mostrar erros da API na UI** — toda operação de escrita (criar/renomear/excluir/salvar) reporta erro no status bar.
-- [ ] Indicador de "salvando…" (hoje só mostra "Salvar *" quando há mudança pendente, sem feedback durante a chamada).
-- [ ] Atalhos de teclado (Ctrl+S salvar, etc.).
+- [x] Indicador de "salvando…" — botão mostra "Salvando…" e fica desabilitado durante a chamada.
+- [x] Atalho de teclado **Ctrl+S** (ou Cmd+S) salva a nota aberta, sem disparar o "Salvar página" do navegador.
 
 ## 3b. Multiusuário (segregação de dados)
 

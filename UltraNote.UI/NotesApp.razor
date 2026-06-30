@@ -69,7 +69,7 @@
             {
                 <div class="editor-head">
                     <input class="title-input" @bind="_title" @bind:event="oninput" />
-                    <button class="btn-accent" @onclick="SaveNote">@(_dirty ? "Salvar *" : "Salvar")</button>
+                    <button class="btn-accent" @onclick="SaveNote" disabled="@_saving">@(_saving ? "Salvando…" : _dirty ? "Salvar *" : "Salvar")</button>
                 </div>
                 <div class="editor-meta">@_meta</div>
                 <RichTextEditor @ref="_editor" Html="@_selectedNote.ContentHtml" OnChanged="MarkDirty" />
@@ -97,11 +97,13 @@
                 <button @onclick="() => NewFolder(_ctx.Folder!.Id)"><i class="ti ti-folder-plus" aria-hidden="true"></i>Nova subpasta</button>
                 <hr />
                 <button @onclick="() => RenameFolder(_ctx.Folder!)"><i class="ti ti-pencil" aria-hidden="true"></i>Renomear</button>
+                <button @onclick="() => OpenMoveFolder(_ctx.Folder!)"><i class="ti ti-folder-symlink" aria-hidden="true"></i>Mover...</button>
                 <button class="danger" @onclick="() => DeleteFolder(_ctx.Folder!)"><i class="ti ti-trash" aria-hidden="true"></i>Excluir</button>
             }
             else
             {
                 <button @onclick="() => RenameNote(_ctx.Note!)"><i class="ti ti-pencil" aria-hidden="true"></i>Renomear</button>
+                <button @onclick="() => OpenMoveNote(_ctx.Note!)"><i class="ti ti-folder-symlink" aria-hidden="true"></i>Mover...</button>
                 <button class="danger" @onclick="() => DeleteNote(_ctx.Note!)"><i class="ti ti-trash" aria-hidden="true"></i>Excluir</button>
             }
         </div>
@@ -116,6 +118,30 @@
                 <div class="modal-actions">
                     <button class="btn-ghost" @onclick="CancelPendingAction">Cancelar</button>
                     <button class="btn-danger" @onclick="ConfirmPendingAction">Descartar e continuar</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (_move is not null)
+    {
+        <div class="modal-backdrop">
+            <div class="modal-card">
+                <h2>Mover @(_move.Folder is not null ? "pasta" : "nota")</h2>
+                <p>Escolha o destino de "@(_move.Folder?.Name ?? _move.Note?.Title)".</p>
+                <select class="modal-select" @bind="_moveDestinationValue">
+                    @if (_move.Folder is not null)
+                    {
+                        <option value="@RootSentinel">(raiz)</option>
+                    }
+                    @foreach (var f in MoveDestinationCandidates())
+                    {
+                        <option value="@f.Id">@f.Path</option>
+                    }
+                </select>
+                <div class="modal-actions">
+                    <button class="btn-ghost" @onclick="CancelMove">Cancelar</button>
+                    <button class="btn-accent" @onclick="ConfirmMove">Mover</button>
                 </div>
             </div>
         </div>
@@ -145,10 +171,18 @@
 
     private CtxMenu? _ctx;
     private Func<Task>? _pendingAction;
+    private bool _saving;
+
+    private record MoveCtx(FolderDto? Folder, NoteSummaryDto? Note);
+    private const string RootSentinel = "__root__";
+    private MoveCtx? _move;
+    private string _moveDestinationValue = "";
 
     private string _theme = "light";
     private IJSObjectReference? _themeJs;
     private IJSObjectReference? _unsavedJs;
+    private IJSObjectReference? _shortcutsJs;
+    private DotNetObjectReference<NotesApp>? _shortcutsRef;
 
     public Guid? SelectedNoteId => _selectedNote?.Id;
 
@@ -160,6 +194,9 @@
         _themeJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-theme.js");
         _theme = await _themeJs.InvokeAsync<string>("getTheme");
         _unsavedJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-unsaved.js");
+        _shortcutsJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-shortcuts.js");
+        _shortcutsRef = DotNetObjectReference.Create(this);
+        await _shortcutsJs.InvokeVoidAsync("init", _shortcutsRef);
         StateHasChanged();
     }
 
@@ -248,7 +285,9 @@
 
     private async Task SaveNote()
     {
-        if (_selectedNote is null || _editor is null) return;
+        if (_selectedNote is null || _editor is null || _saving) return;
+        _saving = true;
+        StateHasChanged();
         try
         {
             var html = await _editor.GetHtmlAsync();
@@ -260,6 +299,13 @@
             _status = $"Salvo: {updated.Title}";
         }
         catch (Exception ex) { _status = $"Erro ao salvar: {ex.Message}"; }
+        finally { _saving = false; StateHasChanged(); }
+    }
+
+    [JSInvokable]
+    public async Task OnSaveShortcut()
+    {
+        if (_selectedNote is not null && !_saving) await SaveNote();
     }
 
     // ---------- Menus ----------
@@ -362,6 +408,78 @@
         catch (Exception ex) { _status = $"Erro ao excluir: {ex.Message}"; }
     }
 
+    // ---------- Move ----------
+    private void OpenMoveFolder(FolderDto folder)
+    {
+        CloseMenus();
+        _move = new MoveCtx(folder, null);
+        _moveDestinationValue = folder.ParentId?.ToString() ?? RootSentinel;
+    }
+
+    private void OpenMoveNote(NoteSummaryDto note)
+    {
+        CloseMenus();
+        _move = new MoveCtx(null, note);
+        _moveDestinationValue = note.FolderId.ToString();
+    }
+
+    private void CancelMove() => _move = null;
+
+    /// <summary>Valid destinations: for a folder, excludes itself and its descendants (would cycle).</summary>
+    private IEnumerable<FolderDto> MoveDestinationCandidates()
+    {
+        if (_move is null) yield break;
+        var ordered = _folders.OrderBy(f => f.Path);
+        if (_move.Folder is { } folder)
+        {
+            foreach (var f in ordered)
+                if (f.Id != folder.Id && !IsUnder(f.Id, folder)) yield return f;
+        }
+        else
+        {
+            foreach (var f in ordered) yield return f;
+        }
+    }
+
+    private async Task ConfirmMove()
+    {
+        if (_move is null) return;
+        try
+        {
+            if (_move.Folder is { } folder)
+            {
+                Guid? destId = _moveDestinationValue == RootSentinel ? null : Guid.Parse(_moveDestinationValue);
+                if (destId != folder.ParentId)
+                {
+                    await Api.UpdateFolderAsync(folder.Id, new UpdateFolderRequest(null, destId));
+                    await LoadFolders();
+                    if (destId is { } d) _expanded.Add(d);
+                    _status = $"Pasta movida: {folder.Name}";
+                }
+            }
+            else if (_move.Note is { } note)
+            {
+                var destId = Guid.Parse(_moveDestinationValue);
+                if (destId != note.FolderId)
+                {
+                    await Api.UpdateNoteAsync(note.Id, new UpdateNoteRequest(null, null, destId));
+                    if (_notes.ContainsKey(note.FolderId)) await LoadNotes(note.FolderId);
+                    _expanded.Add(destId);
+                    await LoadNotes(destId); // always refresh so the moved note appears right away
+                    if (_selectedNote?.Id == note.Id)
+                    {
+                        _selectedNote = await Api.GetNoteAsync(note.Id);
+                        _selectedFolderId = _selectedNote?.FolderId;
+                    }
+                    if (!string.IsNullOrWhiteSpace(_query)) await RunSearch();
+                    _status = $"Nota movida: {note.Title}";
+                }
+            }
+        }
+        catch (Exception ex) { _status = $"Erro ao mover: {ex.Message}"; }
+        _move = null;
+    }
+
     // ---------- Search ----------
     private async Task OnSearchInput(ChangeEventArgs e)
     {
@@ -442,5 +560,10 @@
         {
             try { await _unsavedJs.DisposeAsync(); } catch (JSDisconnectedException) { }
         }
+        if (_shortcutsJs is not null)
+        {
+            try { await _shortcutsJs.InvokeVoidAsync("dispose"); await _shortcutsJs.DisposeAsync(); } catch (JSDisconnectedException) { }
+        }
+        _shortcutsRef?.Dispose();
     }
 }
