@@ -271,6 +271,42 @@ html, body {
 .menu .ti { font-size: 16px; }
 .menu hr { border: none; border-top: 1px solid var(--border-soft); margin: 4px 2px; }
 
+/* ---------- Modal (confirmações) ---------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, .35);
+  display: grid;
+  place-items: center;
+}
+
+.modal-card {
+  width: 360px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+}
+
+.modal-card h2 { margin: 0 0 8px; font-size: 16px; }
+.modal-card p { margin: 0 0 18px; font-size: 13px; color: var(--text-2); line-height: 1.6; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+.btn-ghost, .btn-danger {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  padding: 7px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.btn-ghost:hover { background: var(--hover); }
+.btn-danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.btn-danger:hover { filter: brightness(1.06); }
+
 /* ---------- Login ---------- */
 .login-screen { height: 100vh; display: grid; place-items: center; background: var(--bg); }
 .login-card {

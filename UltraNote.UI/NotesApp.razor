@@ -49,7 +49,7 @@
                 @foreach (var n in _searchResults)
                 {
                     <div class="tree-note @(n.Id == SelectedNoteId ? "active" : "")"
-                         @onclick="() => SelectNote(n.Id)"
+                         @onclick="() => RequestSelectNote(n.Id)"
                          @oncontextmenu:preventDefault="true"
                          @oncontextmenu="(e) => OpenNoteMenu(n, e)">
                         <i class="ti ti-file-text note-ico" aria-hidden="true"></i>
@@ -88,12 +88,12 @@
         <div class="menu" style="left:@($"{_ctx.X}px");top:@($"{_ctx.Y}px")">
             @if (_ctx.Kind == "new")
             {
-                <button @onclick="() => NewNote(_selectedFolderId)" disabled="@(_selectedFolderId is null)"><i class="ti ti-file-plus" aria-hidden="true"></i>Nova nota</button>
+                <button @onclick="() => GuardUnsaved(() => NewNote(_selectedFolderId))" disabled="@(_selectedFolderId is null)"><i class="ti ti-file-plus" aria-hidden="true"></i>Nova nota</button>
                 <button @onclick="() => NewFolder(null)"><i class="ti ti-folder-plus" aria-hidden="true"></i>Nova pasta</button>
             }
             else if (_ctx.Kind == "folder")
             {
-                <button @onclick="() => NewNote(_ctx.Folder!.Id)"><i class="ti ti-file-plus" aria-hidden="true"></i>Nova nota</button>
+                <button @onclick="() => GuardUnsaved(() => NewNote(_ctx.Folder!.Id))"><i class="ti ti-file-plus" aria-hidden="true"></i>Nova nota</button>
                 <button @onclick="() => NewFolder(_ctx.Folder!.Id)"><i class="ti ti-folder-plus" aria-hidden="true"></i>Nova subpasta</button>
                 <hr />
                 <button @onclick="() => RenameFolder(_ctx.Folder!)"><i class="ti ti-pencil" aria-hidden="true"></i>Renomear</button>
@@ -104,6 +104,20 @@
                 <button @onclick="() => RenameNote(_ctx.Note!)"><i class="ti ti-pencil" aria-hidden="true"></i>Renomear</button>
                 <button class="danger" @onclick="() => DeleteNote(_ctx.Note!)"><i class="ti ti-trash" aria-hidden="true"></i>Excluir</button>
             }
+        </div>
+    }
+
+    @if (_pendingAction is not null)
+    {
+        <div class="modal-backdrop">
+            <div class="modal-card">
+                <h2>Alterações não salvas</h2>
+                <p>A nota atual tem alterações não salvas. Se continuar, elas serão descartadas.</p>
+                <div class="modal-actions">
+                    <button class="btn-ghost" @onclick="CancelPendingAction">Cancelar</button>
+                    <button class="btn-danger" @onclick="ConfirmPendingAction">Descartar e continuar</button>
+                </div>
+            </div>
         </div>
     }
 </div>
@@ -130,9 +144,11 @@
     private List<NoteSummaryDto> _searchResults = new();
 
     private CtxMenu? _ctx;
+    private Func<Task>? _pendingAction;
 
     private string _theme = "light";
     private IJSObjectReference? _themeJs;
+    private IJSObjectReference? _unsavedJs;
 
     public Guid? SelectedNoteId => _selectedNote?.Id;
 
@@ -143,6 +159,7 @@
         if (!firstRender) return;
         _themeJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-theme.js");
         _theme = await _themeJs.InvokeAsync<string>("getTheme");
+        _unsavedJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-unsaved.js");
         StateHasChanged();
     }
 
@@ -177,7 +194,11 @@
     }
 
     // ---------- Selection ----------
-    public async Task SelectNote(Guid id)
+
+    /// <summary>Entry point from the UI: guards against discarding unsaved edits before switching notes.</summary>
+    public void RequestSelectNote(Guid id) => GuardUnsaved(() => SelectNoteNow(id));
+
+    private async Task SelectNoteNow(Guid id)
     {
         try
         {
@@ -186,7 +207,7 @@
             {
                 _selectedFolderId = _selectedNote.FolderId;
                 _title = _selectedNote.Title;
-                _dirty = false;
+                await SetDirty(false);
                 UpdateMeta();
                 _status = $"Editando: {_selectedNote.Title}";
             }
@@ -196,7 +217,34 @@
         StateHasChanged();
     }
 
-    private void MarkDirty() { if (!_dirty) { _dirty = true; StateHasChanged(); } }
+    // ---------- Unsaved-changes guard ----------
+
+    /// <summary>Runs immediately if there's nothing unsaved; otherwise asks for confirmation first.</summary>
+    private void GuardUnsaved(Func<Task> action)
+    {
+        if (_dirty) { _pendingAction = action; StateHasChanged(); }
+        else { _ = action(); }
+    }
+
+    private async Task ConfirmPendingAction()
+    {
+        var action = _pendingAction;
+        _pendingAction = null;
+        await SetDirty(false);
+        if (action is not null) await action();
+    }
+
+    private void CancelPendingAction() => _pendingAction = null;
+
+    private async Task SetDirty(bool value)
+    {
+        if (_dirty == value) return;
+        _dirty = value;
+        if (_unsavedJs is not null) await _unsavedJs.InvokeVoidAsync("setGuard", value);
+        StateHasChanged();
+    }
+
+    private async Task MarkDirty() => await SetDirty(true);
 
     private async Task SaveNote()
     {
@@ -206,7 +254,7 @@
             var html = await _editor.GetHtmlAsync();
             var updated = await Api.UpdateNoteAsync(_selectedNote.Id, new UpdateNoteRequest(_title, html, null));
             _selectedNote = updated;
-            _dirty = false;
+            await SetDirty(false);
             UpdateMeta();
             if (_notes.ContainsKey(updated.FolderId)) await LoadNotes(updated.FolderId);
             _status = $"Salvo: {updated.Title}";
@@ -247,7 +295,7 @@
             var note = await Api.CreateNoteAsync(new CreateNoteRequest(fid, title, "<p></p>"));
             _expanded.Add(fid);
             await LoadNotes(fid);
-            await SelectNote(note.Id);
+            await SelectNoteNow(note.Id);
             _status = $"Nota criada: {note.Title}";
         }
         catch (Exception ex) { _status = $"Erro ao criar nota: {ex.Message}"; }
@@ -276,7 +324,7 @@
             await Api.DeleteFolderAsync(folder.Id);
             _notes.Remove(folder.Id);
             _expanded.Remove(folder.Id);
-            if (_selectedNote is not null && IsUnder(_selectedNote.FolderId, folder)) ClearEditor();
+            if (_selectedNote is not null && IsUnder(_selectedNote.FolderId, folder)) await ClearEditor();
             await LoadFolders();
             _status = $"Pasta excluída: {folder.Name}";
         }
@@ -307,7 +355,7 @@
         {
             await Api.DeleteNoteAsync(note.Id);
             if (_notes.ContainsKey(note.FolderId)) await LoadNotes(note.FolderId);
-            if (_selectedNote?.Id == note.Id) ClearEditor();
+            if (_selectedNote?.Id == note.Id) await ClearEditor();
             if (!string.IsNullOrWhiteSpace(_query)) await RunSearch();
             _status = $"Nota excluída: {note.Title}";
         }
@@ -357,7 +405,13 @@
         return nf.Id == folder.Id || nf.Path == folder.Path || nf.Path.StartsWith(folder.Path + "/");
     }
 
-    private void ClearEditor() { _selectedNote = null; _title = ""; _meta = ""; _dirty = false; }
+    private async Task ClearEditor()
+    {
+        _selectedNote = null;
+        _title = "";
+        _meta = "";
+        await SetDirty(false);
+    }
 
     private void UpdateMeta()
     {
@@ -383,6 +437,10 @@
         if (_themeJs is not null)
         {
             try { await _themeJs.DisposeAsync(); } catch (JSDisconnectedException) { }
+        }
+        if (_unsavedJs is not null)
+        {
+            try { await _unsavedJs.DisposeAsync(); } catch (JSDisconnectedException) { }
         }
     }
 }

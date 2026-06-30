@@ -22,7 +22,7 @@
         {
             <div class="tree-note @(note.Id == Owner.SelectedNoteId ? "active" : "")"
                  style="padding-left:@(8 + (Depth + 1) * 15 + 4)px"
-                 @onclick="() => Owner.SelectNote(note.Id)"
+                 @onclick="() => Owner.RequestSelectNote(note.Id)"
                  @oncontextmenu:preventDefault="true"
                  @oncontextmenu="(e) => Owner.OpenNoteMenu(note, e)">
                 <i class="ti ti-file-text note-ico" aria-hidden="true"></i>

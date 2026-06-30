@@ -24,16 +24,16 @@ Backlog de evolução. Marque `[x]` ao concluir. Prioridade sugerida de cima par
 
 ## 2. Gestão de notas e pastas (API já suporta; falta UI)
 
-- [ ] **Excluir nota** pela lista.
-- [ ] **Renomear pasta** pela UI.
-- [ ] **Mover** nota/pasta (ação de mover ou drag-drop).
-- [ ] **Busca** de notas (por título/conteúdo).
+- [x] **Excluir nota** — menu de contexto.
+- [x] **Renomear pasta** — menu de contexto.
+- [x] **Buscar** notas (por título) — caixa de busca na barra superior.
+- [ ] **Mover** nota/pasta (ação de mover ou drag-drop) — falta também renomear/excluir **nota** com nome próprio de pasta vs. mover entre pastas.
 
 ## 3. UX e robustez
 
-- [ ] **Guarda de alterações não salvas**: avisar/bloquear ao trocar de nota/pasta com edição pendente (o app Tauri original tinha isso).
-- [ ] **Mostrar erros da API na UI**: hoje operações de escrita (ex.: criar pasta) podem falhar em silêncio — exibir mensagem no status/toast.
-- [ ] Indicador de "salvando…/salvo".
+- [x] **Guarda de alterações não salvas** — modal de confirmação ao trocar de nota com edição pendente (cancelar/descartar), + aviso nativo do navegador ao fechar/recarregar a aba.
+- [x] **Mostrar erros da API na UI** — toda operação de escrita (criar/renomear/excluir/salvar) reporta erro no status bar.
+- [ ] Indicador de "salvando…" (hoje só mostra "Salvar *" quando há mudança pendente, sem feedback durante a chamada).
 - [ ] Atalhos de teclado (Ctrl+S salvar, etc.).
 
 ## 3b. Multiusuário (segregação de dados)
