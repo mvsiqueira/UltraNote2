@@ -185,7 +185,6 @@ const COMMANDS = {
 export function attach(el, dotNetRef) {
     let dragCleanup = null;
     let hoveredRow = null;
-    let hoveredLink = null;
 
     const editor = new Editor({
         element: el,
@@ -268,24 +267,20 @@ export function attach(el, dotNetRef) {
                 },
                 mousemove(view, event) {
                     const row = findResizeRowAtPoint(view.dom, event.clientX, event.clientY);
-                    hoveredLink = event.target?.closest?.("a") ?? null;
                     if (!dragCleanup) {
                         const isTarget = Boolean(row && isNearRowBottom(row, event.clientY));
                         if (hoveredRow && hoveredRow !== row) setRowResizeHover(hoveredRow, false);
                         hoveredRow = isTarget ? row : null;
                         document.body.classList.toggle("row-resize-cursor", isTarget);
                         if (row) setRowResizeHover(row, isTarget);
-                        view.dom.style.cursor = (!isTarget && event.ctrlKey && hoveredLink) ? "pointer" : "";
                     }
                     return false;
                 },
-                mouseleave(view) {
-                    hoveredLink = null;
+                mouseleave() {
                     if (!dragCleanup) {
                         document.body.classList.remove("row-resize-cursor");
                         if (hoveredRow) setRowResizeHover(hoveredRow, false);
                         hoveredRow = null;
-                        view.dom.style.cursor = "";
                     }
                     return false;
                 },
@@ -324,9 +319,10 @@ export function attach(el, dotNetRef) {
     });
 
     const proseMirror = editor.view.dom;
-    const onKeyDown = (e) => { if (e.key === "Control" && hoveredLink) proseMirror.style.cursor = "pointer"; };
-    const onKeyUp = (e) => { if (e.key === "Control") proseMirror.style.cursor = ""; };
-    const onBlur = () => { proseMirror.style.cursor = ""; hoveredLink = null; };
+    const setLinkCursors = (cursor) => proseMirror.querySelectorAll("a").forEach(a => { a.style.cursor = cursor; });
+    const onKeyDown = (e) => { if (e.key === "Control") setLinkCursors("pointer"); };
+    const onKeyUp = (e) => { if (e.key === "Control") setLinkCursors(""); };
+    const onBlur = () => setLinkCursors("");
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("keyup", onKeyUp);
     window.addEventListener("blur", onBlur);
