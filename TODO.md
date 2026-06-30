@@ -21,6 +21,9 @@ Backlog de evolução. Marque `[x]` ao concluir. Prioridade sugerida de cima par
   - [x] **Indentação** (aumentar/diminuir recuo, `data-indent` attribute).
   - [x] Menu de contexto (botão direito): formatação sempre; operações de tabela só dentro de uma tabela.
 - [ ] **Colar imagem** no editor → upload via API de anexos → embutir no HTML (a API já suporta anexos; falta o front usar). Não fazia parte do app original — feature nova.
+- [ ] **Remover formatação** — botão na toolbar que limpa todas as marcas (negrito, cor, realce, etc.) do texto selecionado.
+- [ ] **Melhorar menu de contexto** — revisar itens, agrupar melhor, adicionar ícones mais claros.
+- [ ] **Melhorar color picker** — paleta mais rica, preview em tempo real, histórico de cores usadas.
 
 ## 2. Gestão de notas e pastas (API já suporta; falta UI)
 
@@ -28,6 +31,7 @@ Backlog de evolução. Marque `[x]` ao concluir. Prioridade sugerida de cima par
 - [x] **Renomear pasta** — menu de contexto.
 - [x] **Buscar** notas (por título) — caixa de busca na barra superior.
 - [x] **Mover** nota/pasta — menu de contexto "Mover...", modal com seletor de destino (pastas descendentes excluídas para evitar ciclo).
+- [ ] **Importar do Evernote** — importar arquivo `.enex` (formato de exportação do Evernote): criar pastas/notas preservando estrutura e conteúdo HTML.
 
 ## 3. UX e robustez
 
@@ -35,6 +39,9 @@ Backlog de evolução. Marque `[x]` ao concluir. Prioridade sugerida de cima par
 - [x] **Mostrar erros da API na UI** — toda operação de escrita (criar/renomear/excluir/salvar) reporta erro no status bar.
 - [x] Indicador de "salvando…" — botão mostra "Salvando…" e fica desabilitado durante a chamada.
 - [x] Atalho de teclado **Ctrl+S** (ou Cmd+S) salva a nota aberta, sem disparar o "Salvar página" do navegador.
+- [ ] **Adaptar para mobile** — layout responsivo: sidebar recolhível, toolbar do editor adaptada para toque, área de edição ocupa tela cheia.
+- [ ] **Barra de ferramentas acima da árvore** — ações rápidas (nova pasta, nova nota, recolher tudo) fixas no topo do painel lateral.
+- [ ] **Tela de About** — versão do app, créditos, links (GitHub, etc.).
 
 ## 3b. Multiusuário (segregação de dados)
 
@@ -60,13 +67,19 @@ Backlog de evolução. Marque `[x]` ao concluir. Prioridade sugerida de cima par
   - [ ] Login Google via **WebAuthenticator** (em vez do GIS da web).
 - [ ] (Opcional) Cache local leve p/ resiliência offline.
 
-## 6. Infra / Deploy / Qualidade
+## 6. Visual / Identidade
+
+- [ ] **Alterar logo** — criar/escolher logotipo para o UltraNote (exibido na tela de login, about e splash de loading).
+- [ ] **Alterar favicon** — substituir o favicon padrão do Blazor pelo ícone do UltraNote.
+
+## 7. Infra / Deploy / Qualidade
 
 - [ ] Automatizar o fluxo de atualização (script: copiar p/ NAS → `docker run ... publish` → recriar app).
 - [ ] **Backup** automatizado de `/share/Container/ultranote-data` e `/ultranote-assets`.
 - [ ] (Dev) Decidir se o `appsettings.json` local fica **sem** `GoogleClientId` (dev sem login, mais ágil) — produção continua protegida.
 - [ ] Testes automatizados (API: endpoints; UI: componentes principais).
 - [ ] Healthcheck de container / monitor de uptime.
+- [ ] App Windows (desktop): `UltraNote.Desktop` — MAUI Blazor Hybrid (ver §5).
 
 ---
 
