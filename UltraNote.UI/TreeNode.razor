@@ -18,10 +18,12 @@
 
     @if (Owner.NotesOf(Folder.Id) is { } notes)
     {
+        @* Notes have no chevron, so +20 (chevron width 14px + row gap 6px) keeps their
+           icon aligned with where a child folder's icon would sit at the same depth. *@
         @foreach (var note in notes)
         {
             <div class="tree-note @(note.Id == Owner.SelectedNoteId ? "active" : "")"
-                 style="padding-left:@(8 + (Depth + 1) * 15 + 4)px"
+                 style="padding-left:@(8 + (Depth + 1) * 15 + 20)px"
                  @onclick="() => Owner.RequestSelectNote(note.Id)"
                  @oncontextmenu:preventDefault="true"
                  @oncontextmenu="(e) => Owner.OpenNoteMenu(note, e)">
