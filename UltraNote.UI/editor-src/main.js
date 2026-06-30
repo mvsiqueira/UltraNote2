@@ -318,7 +318,23 @@ export function attach(el, dotNetRef) {
         },
     });
 
-    registry.set(el, { editor, dispose: () => { if (dragCleanup) dragCleanup(); } });
+    const onKeyDown = (e) => { if (e.key === "Control") el.classList.add("ctrl-held"); };
+    const onKeyUp = (e) => { if (e.key === "Control") el.classList.remove("ctrl-held"); };
+    const onBlur = () => el.classList.remove("ctrl-held");
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
+
+    registry.set(el, {
+        editor,
+        dispose: () => {
+            if (dragCleanup) dragCleanup();
+            document.removeEventListener("keydown", onKeyDown);
+            document.removeEventListener("keyup", onKeyUp);
+            window.removeEventListener("blur", onBlur);
+            el.classList.remove("ctrl-held");
+        },
+    });
 }
 
 function get(el) {

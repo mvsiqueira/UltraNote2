@@ -244,6 +244,7 @@ html, body {
 .rte-prosemirror li { margin: 0 0 2px; }
 .rte-prosemirror h1, .rte-prosemirror h2, .rte-prosemirror h3 { color: var(--text); line-height: 1.25; }
 .rte-prosemirror a { color: var(--accent); }
+.rte-surface.ctrl-held .rte-prosemirror a { cursor: pointer; }
 
 .rte-prosemirror p[data-indent="1"], .rte-prosemirror li[data-indent="1"] { margin-left: 24px; }
 .rte-prosemirror p[data-indent="2"], .rte-prosemirror li[data-indent="2"] { margin-left: 48px; }
