@@ -103,10 +103,10 @@
                         <div class="attachments-list">
                             @foreach (var att in _attachments)
                             {
-                                <div class="attachment-item">
+                                <div class="attachment-item" @ondblclick="() => OpenAttachment(att)">
                                     <i class="ti @FileIcon(att.ContentType)" aria-hidden="true"></i>
                                     <span class="att-name" title="@att.FileName">@att.FileName</span>
-                                    <a class="icon-btn" href="@att.Url" target="_blank" title="Baixar"><i class="ti ti-download" aria-hidden="true"></i></a>
+                                    <a class="icon-btn" href="@Api.GetAttachmentUrl(att.Id)" target="_blank" title="Baixar"><i class="ti ti-download" aria-hidden="true"></i></a>
                                     <button class="icon-btn danger" title="Excluir anexo" @onclick="() => DeleteAttachment(att)"><i class="ti ti-trash" aria-hidden="true"></i></button>
                                 </div>
                             }
@@ -785,6 +785,9 @@
         }
         StateHasChanged();
     }
+
+    private async Task OpenAttachment(AttachmentDto att) =>
+        await JS.InvokeVoidAsync("open", Api.GetAttachmentUrl(att.Id), "_blank");
 
     private async Task DeleteAttachment(AttachmentDto att)
     {
