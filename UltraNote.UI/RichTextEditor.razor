@@ -74,30 +74,37 @@
 {
     <div class="menu-backdrop" @onclick="CloseCtxMenu" @oncontextmenu:preventDefault="true" @oncontextmenu="CloseCtxMenu"></div>
     <div class="menu" style="left:@($"{_ctxMenu.X}px");top:@($"{_ctxMenu.Y}px")">
-        <button @onclick='() => RunCtx("bold")'><i class="ti ti-bold" aria-hidden="true"></i>Negrito</button>
-        <button @onclick='() => RunCtx("italic")'><i class="ti ti-italic" aria-hidden="true"></i>Itálico</button>
-        <button @onclick='() => RunCtx("strike")'><i class="ti ti-strikethrough" aria-hidden="true"></i>Tachado</button>
-        <button @onclick='() => RunCtx("color", "#c43d2f")'><i class="ti ti-letter-case" aria-hidden="true"></i>Fonte vermelha</button>
-        <button @onclick='() => RunCtx("highlight", "#fff2a8")'><i class="ti ti-highlight" aria-hidden="true"></i>Realce amarelo</button>
-        <button @onclick='() => RunCtx("bulletList")'><i class="ti ti-list" aria-hidden="true"></i>Lista</button>
-        <button @onclick='() => RunCtx("orderedList")'><i class="ti ti-list-numbers" aria-hidden="true"></i>Lista numerada</button>
-
-        @if (_ctxMenu.InTable)
+        @if (_ctxMenu.InImage)
         {
-            <hr />
-            <button @onclick='() => RunCtx("addColumnBefore")'><i class="ti ti-column-insert-left" aria-hidden="true"></i>Inserir coluna antes</button>
-            <button @onclick='() => RunCtx("addColumnAfter")'><i class="ti ti-column-insert-right" aria-hidden="true"></i>Inserir coluna depois</button>
-            <button @onclick='() => RunCtx("deleteColumn")'><i class="ti ti-column-remove" aria-hidden="true"></i>Excluir coluna</button>
-            <button @onclick='() => RunCtx("addRowBefore")'><i class="ti ti-row-insert-top" aria-hidden="true"></i>Inserir linha acima</button>
-            <button @onclick='() => RunCtx("addRowAfter")'><i class="ti ti-row-insert-bottom" aria-hidden="true"></i>Inserir linha abaixo</button>
-            <button @onclick='() => RunCtx("deleteRow")'><i class="ti ti-row-remove" aria-hidden="true"></i>Excluir linha</button>
-            <button @onclick='() => RunCtx("mergeCells")'><i class="ti ti-table-row" aria-hidden="true"></i>Mesclar células</button>
-            <button @onclick='() => RunCtx("splitCell")'><i class="ti ti-table-column" aria-hidden="true"></i>Separar célula</button>
-            <button @onclick="() => ResizeCell(24, 0)"><i class="ti ti-arrow-autofit-width" aria-hidden="true"></i>Aumentar largura</button>
-            <button @onclick="() => ResizeCell(-24, 0)"><i class="ti ti-arrow-autofit-width" aria-hidden="true"></i>Diminuir largura</button>
-            <button @onclick="() => ResizeCell(0, 12)"><i class="ti ti-arrow-autofit-height" aria-hidden="true"></i>Aumentar altura</button>
-            <button @onclick="() => ResizeCell(0, -12)"><i class="ti ti-arrow-autofit-height" aria-hidden="true"></i>Diminuir altura</button>
-            <button class="danger" @onclick='() => RunCtx("deleteTable")'><i class="ti ti-trash" aria-hidden="true"></i>Excluir tabela</button>
+            <button class="danger" @onclick="DeleteImage"><i class="ti ti-photo-x" aria-hidden="true"></i>Excluir imagem</button>
+        }
+        else
+        {
+            <button @onclick='() => RunCtx("bold")'><i class="ti ti-bold" aria-hidden="true"></i>Negrito</button>
+            <button @onclick='() => RunCtx("italic")'><i class="ti ti-italic" aria-hidden="true"></i>Itálico</button>
+            <button @onclick='() => RunCtx("strike")'><i class="ti ti-strikethrough" aria-hidden="true"></i>Tachado</button>
+            <button @onclick='() => RunCtx("color", "#c43d2f")'><i class="ti ti-letter-case" aria-hidden="true"></i>Fonte vermelha</button>
+            <button @onclick='() => RunCtx("highlight", "#fff2a8")'><i class="ti ti-highlight" aria-hidden="true"></i>Realce amarelo</button>
+            <button @onclick='() => RunCtx("bulletList")'><i class="ti ti-list" aria-hidden="true"></i>Lista</button>
+            <button @onclick='() => RunCtx("orderedList")'><i class="ti ti-list-numbers" aria-hidden="true"></i>Lista numerada</button>
+
+            @if (_ctxMenu.InTable)
+            {
+                <hr />
+                <button @onclick='() => RunCtx("addColumnBefore")'><i class="ti ti-column-insert-left" aria-hidden="true"></i>Inserir coluna antes</button>
+                <button @onclick='() => RunCtx("addColumnAfter")'><i class="ti ti-column-insert-right" aria-hidden="true"></i>Inserir coluna depois</button>
+                <button @onclick='() => RunCtx("deleteColumn")'><i class="ti ti-column-remove" aria-hidden="true"></i>Excluir coluna</button>
+                <button @onclick='() => RunCtx("addRowBefore")'><i class="ti ti-row-insert-top" aria-hidden="true"></i>Inserir linha acima</button>
+                <button @onclick='() => RunCtx("addRowAfter")'><i class="ti ti-row-insert-bottom" aria-hidden="true"></i>Inserir linha abaixo</button>
+                <button @onclick='() => RunCtx("deleteRow")'><i class="ti ti-row-remove" aria-hidden="true"></i>Excluir linha</button>
+                <button @onclick='() => RunCtx("mergeCells")'><i class="ti ti-table-row" aria-hidden="true"></i>Mesclar células</button>
+                <button @onclick='() => RunCtx("splitCell")'><i class="ti ti-table-column" aria-hidden="true"></i>Separar célula</button>
+                <button @onclick="() => ResizeCell(24, 0)"><i class="ti ti-arrow-autofit-width" aria-hidden="true"></i>Aumentar largura</button>
+                <button @onclick="() => ResizeCell(-24, 0)"><i class="ti ti-arrow-autofit-width" aria-hidden="true"></i>Diminuir largura</button>
+                <button @onclick="() => ResizeCell(0, 12)"><i class="ti ti-arrow-autofit-height" aria-hidden="true"></i>Aumentar altura</button>
+                <button @onclick="() => ResizeCell(0, -12)"><i class="ti ti-arrow-autofit-height" aria-hidden="true"></i>Diminuir altura</button>
+                <button class="danger" @onclick='() => RunCtx("deleteTable")'><i class="ti ti-trash" aria-hidden="true"></i>Excluir tabela</button>
+            }
         }
     </div>
 }
@@ -106,7 +113,7 @@
     private static readonly string[] FontColors = { "#1f2328", "#c43d2f", "#b56a00", "#2d7d46", "#1f6feb", "#6639ba" };
     private static readonly string[] HighlightColors = { "#fff2a8", "#ffd8a8", "#c9f2d0", "#cce5ff", "#eadcff", "#f5c2c7" };
 
-    private record CtxMenu(double X, double Y, bool InTable, double CellWidth, double RowHeight, bool IsHeaderCell);
+    private record CtxMenu(double X, double Y, bool InTable, double CellWidth, double RowHeight, bool IsHeaderCell, bool InImage = false, string ImageSrc = "");
 
     private ElementReference _surface;
     private IJSObjectReference? _module;
@@ -198,14 +205,26 @@
 
     // ---------- Context menu (right-click in the editor) ----------
     [JSInvokable]
-    public void OnEditorContextMenu(double x, double y, bool inTable, double cellWidth, double rowHeight, bool isHeaderCell)
+    public void OnEditorContextMenu(double x, double y, bool inTable, double cellWidth, double rowHeight, bool isHeaderCell, bool inImage = false, string imageSrc = "")
     {
-        // x/y arrive already clamped to the viewport (computed in JS, see editor-src/main.js).
-        _ctxMenu = new CtxMenu(x, y, inTable, cellWidth, rowHeight, isHeaderCell);
+        _ctxMenu = new CtxMenu(x, y, inTable, cellWidth, rowHeight, isHeaderCell, inImage, imageSrc);
         StateHasChanged();
     }
 
     private void CloseCtxMenu() => _ctxMenu = null;
+
+    private async Task DeleteImage()
+    {
+        var src = _ctxMenu?.ImageSrc ?? "";
+        CloseCtxMenu();
+        await Exec("deleteImage");
+        // Extract attachment ID from URL ending in /api/attachments/{guid}
+        var parts = src.TrimEnd('/').Split('/');
+        if (parts.Length > 0 && Guid.TryParse(parts[^1], out var id))
+        {
+            try { await Api.DeleteAttachmentAsync(id); } catch { }
+        }
+    }
 
     private async Task RunCtx(string command, string? arg = null)
     {

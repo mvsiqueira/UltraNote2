@@ -6,6 +6,7 @@
 import { Editor, Extension } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
+import { NodeSelection } from "@tiptap/pm/state";
 import TextStyle from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
 import Highlight from "@tiptap/extension-highlight";
@@ -15,6 +16,88 @@ import Table from "@tiptap/extension-table";
 import TableRow from "@tiptap/extension-table-row";
 import TableHeader from "@tiptap/extension-table-header";
 import TableCell from "@tiptap/extension-table-cell";
+
+// Image extension extended to persist width attribute
+const ResizableImage = Image.extend({
+    addAttributes() {
+        return {
+            ...this.parent?.(),
+            width: {
+                default: null,
+                parseHTML: (el) => el.getAttribute("width") ?? null,
+                renderHTML: (attrs) => {
+                    if (!attrs.width) return {};
+                    const w = Number(attrs.width);
+                    return { width: w, style: `width: ${w}px` };
+                },
+            },
+        };
+    },
+});
+
+// Global resize handle (shared across all editor instances)
+let imgResizeHandle = null;
+let currentResizeImg = null;
+let currentResizeEditor = null;
+
+function findImagePos(doc, src) {
+    let result = null;
+    doc.descendants((node, pos) => {
+        if (result !== null) return false;
+        if (node.type.name === "image" && node.attrs.src === src) { result = pos; return false; }
+    });
+    return result;
+}
+
+function positionResizeHandle(img) {
+    const handle = getOrCreateResizeHandle();
+    const rect = img.getBoundingClientRect();
+    handle.style.left = `${rect.right - 6}px`;
+    handle.style.top = `${rect.bottom - 6}px`;
+    handle.style.display = "block";
+}
+
+function hideResizeHandle() {
+    if (imgResizeHandle) imgResizeHandle.style.display = "none";
+    currentResizeImg = null;
+    currentResizeEditor = null;
+}
+
+function getOrCreateResizeHandle() {
+    if (imgResizeHandle) return imgResizeHandle;
+    imgResizeHandle = document.createElement("div");
+    imgResizeHandle.className = "img-resize-handle";
+    imgResizeHandle.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!currentResizeImg || !currentResizeEditor) return;
+        const img = currentResizeImg;
+        const ed = currentResizeEditor;
+        const startX = e.clientX;
+        const startWidth = img.getBoundingClientRect().width;
+        const imgSrc = img.src;
+        const onMove = (me) => {
+            const w = Math.max(40, startWidth + me.clientX - startX);
+            img.style.width = `${w}px`;
+            positionResizeHandle(img);
+        };
+        const onUp = (ue) => {
+            document.removeEventListener("mousemove", onMove);
+            document.removeEventListener("mouseup", onUp);
+            const w = Math.max(40, startWidth + ue.clientX - startX);
+            try {
+                const pos = findImagePos(ed.state.doc, imgSrc);
+                if (pos !== null)
+                    ed.chain().setNodeSelection(pos).updateAttributes("image", { width: Math.round(w) }).focus().run();
+            } catch {}
+            positionResizeHandle(img);
+        };
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
+    });
+    document.body.appendChild(imgResizeHandle);
+    return imgResizeHandle;
+}
 
 const maxIndentLevel = 6;
 
@@ -172,6 +255,10 @@ const COMMANDS = {
     indent: (e) => adjustIndent(e, 1),
     outdent: (e) => adjustIndent(e, -1),
     insertImage: (e, arg) => e.chain().focus().setImage({ src: arg }).run(),
+    deleteImage: (e) => {
+        const { selection } = e.state;
+        if (selection.node?.type.name === "image") e.chain().focus().deleteSelection().run();
+    },
     insertTable: (e) => e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
     addColumnBefore: (e) => e.chain().focus().addColumnBefore().run(),
     addColumnAfter: (e) => e.chain().focus().addColumnAfter().run(),
@@ -198,7 +285,7 @@ export function attach(el, dotNetRef) {
             IndentExtension,
             Link.configure({ openOnClick: false }),
             Placeholder.configure({ placeholder: "Escreva sua nota..." }),
-            Image.configure({ inline: false, HTMLAttributes: { class: "rte-image" } }),
+            ResizableImage.configure({ inline: false, HTMLAttributes: { class: "rte-image" } }),
             Table.configure({ resizable: true, cellMinWidth: 36, lastColumnResizable: true }),
             StyledTableRow,
             StyledTableHeader,
@@ -287,30 +374,37 @@ export function attach(el, dotNetRef) {
                     }
                     return false;
                 },
-                contextmenu(_view, event) {
+                contextmenu(view, event) {
                     const target = event.target;
                     const cell = target?.closest?.("td, th");
                     const row = target?.closest?.("tr");
                     const inTable = Boolean(target?.closest?.("td, th, table"));
+                    const img = target?.closest?.("img");
+                    const inImage = Boolean(img);
                     event.preventDefault();
 
-                    // Clamp here (not in C#) since window.innerWidth/Height are only
-                    // accurate in JS; menu size is an estimate (same approach the original
-                    // app used), refined once Blazor actually renders it.
-                    const menuWidth = inTable ? 210 : 168;
-                    const menuHeight = inTable ? 430 : 170;
+                    if (inImage) {
+                        hideResizeHandle();
+                        try {
+                            const pos = view.posAtDOM(img, 0);
+                            view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, pos)));
+                        } catch {}
+                    }
+
+                    const menuWidth = inImage ? 168 : inTable ? 210 : 168;
+                    const menuHeight = inImage ? 52 : inTable ? 430 : 170;
                     const margin = 8;
                     const x = Math.max(margin, Math.min(event.clientX, window.innerWidth - menuWidth - margin));
                     const y = Math.max(margin, Math.min(event.clientY, window.innerHeight - menuHeight - margin));
 
                     dotNetRef.invokeMethodAsync(
                         "OnEditorContextMenu",
-                        x,
-                        y,
-                        inTable,
+                        x, y, inTable,
                         Math.round(cell?.getBoundingClientRect().width ?? 120),
                         Math.round(row?.getBoundingClientRect().height ?? 32),
                         cell?.tagName?.toLowerCase() === "th",
+                        inImage,
+                        img?.src ?? "",
                     );
                     return true;
                 },
@@ -329,6 +423,15 @@ export function attach(el, dotNetRef) {
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("keyup", onKeyUp);
     window.addEventListener("blur", onBlur);
+
+    const onImgClick = (e) => {
+        const img = e.target?.closest?.("img");
+        if (img) { currentResizeImg = img; currentResizeEditor = editor; positionResizeHandle(img); }
+        else hideResizeHandle();
+    };
+    const onScroll = () => hideResizeHandle();
+    proseMirror.addEventListener("click", onImgClick);
+    proseMirror.addEventListener("scroll", onScroll);
 
     const onPaste = async (e) => {
         const items = Array.from(e.clipboardData?.items ?? []).filter(i => i.type.startsWith("image/"));
@@ -359,6 +462,9 @@ export function attach(el, dotNetRef) {
             window.removeEventListener("blur", onBlur);
             proseMirror.removeEventListener("paste", onPaste);
             proseMirror.removeEventListener("drop", onDrop);
+            proseMirror.removeEventListener("click", onImgClick);
+            proseMirror.removeEventListener("scroll", onScroll);
+            if (currentResizeEditor === editor) hideResizeHandle();
         },
     });
 }
