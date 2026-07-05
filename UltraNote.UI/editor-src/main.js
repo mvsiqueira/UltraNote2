@@ -5,6 +5,7 @@
 
 import { Editor, Extension } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
+import Image from "@tiptap/extension-image";
 import TextStyle from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
 import Highlight from "@tiptap/extension-highlight";
@@ -170,6 +171,7 @@ const COMMANDS = {
     link: (e, arg) => (arg ? e.chain().focus().setLink({ href: arg }).run() : e.chain().focus().unsetLink().run()),
     indent: (e) => adjustIndent(e, 1),
     outdent: (e) => adjustIndent(e, -1),
+    insertImage: (e, arg) => e.chain().focus().setImage({ src: arg }).run(),
     insertTable: (e) => e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
     addColumnBefore: (e) => e.chain().focus().addColumnBefore().run(),
     addColumnAfter: (e) => e.chain().focus().addColumnAfter().run(),
@@ -196,6 +198,7 @@ export function attach(el, dotNetRef) {
             IndentExtension,
             Link.configure({ openOnClick: false }),
             Placeholder.configure({ placeholder: "Escreva sua nota..." }),
+            Image.configure({ inline: false, HTMLAttributes: { class: "rte-image" } }),
             Table.configure({ resizable: true, cellMinWidth: 36, lastColumnResizable: true }),
             StyledTableRow,
             StyledTableHeader,
@@ -327,6 +330,26 @@ export function attach(el, dotNetRef) {
     document.addEventListener("keyup", onKeyUp);
     window.addEventListener("blur", onBlur);
 
+    const onPaste = async (e) => {
+        const items = Array.from(e.clipboardData?.items ?? []).filter(i => i.type.startsWith("image/"));
+        if (items.length === 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        for (const item of items) {
+            const file = item.getAsFile();
+            if (file) await uploadAndInsert(file, editor, dotNetRef);
+        }
+    };
+    const onDrop = async (e) => {
+        const files = Array.from(e.dataTransfer?.files ?? []).filter(f => f.type.startsWith("image/"));
+        if (files.length === 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        for (const file of files) await uploadAndInsert(file, editor, dotNetRef);
+    };
+    proseMirror.addEventListener("paste", onPaste);
+    proseMirror.addEventListener("drop", onDrop);
+
     registry.set(el, {
         editor,
         dispose: () => {
@@ -334,6 +357,8 @@ export function attach(el, dotNetRef) {
             document.removeEventListener("keydown", onKeyDown);
             document.removeEventListener("keyup", onKeyUp);
             window.removeEventListener("blur", onBlur);
+            proseMirror.removeEventListener("paste", onPaste);
+            proseMirror.removeEventListener("drop", onDrop);
         },
     });
 }
@@ -371,6 +396,38 @@ export function resizeCurrentCell(el, width, height, isHeader) {
         .updateAttributes(target, { style: `width: ${safeWidth}px; min-width: ${safeWidth}px; height: ${safeHeight}px;` })
         .updateAttributes("tableRow", { style: `height: ${safeHeight}px;` })
         .run();
+}
+
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.substring(reader.result.indexOf(",") + 1));
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+async function uploadAndInsert(file, editor, dotNetRef) {
+    try {
+        const base64 = await fileToBase64(file);
+        const url = await dotNetRef.invokeMethodAsync("UploadImageAsync", base64, file.name, file.type);
+        if (url) editor.chain().focus().setImage({ src: url }).run();
+    } catch (err) {
+        console.error("[UltraNote] Image upload failed", err);
+    }
+}
+
+export function insertImageFromFile(el, dotNetRef) {
+    const editor = get(el);
+    if (!editor) return;
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = async () => {
+        const file = input.files?.[0];
+        if (file) await uploadAndInsert(file, editor, dotNetRef);
+    };
+    input.click();
 }
 
 export function dispose(el) {

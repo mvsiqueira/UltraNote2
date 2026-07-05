@@ -297,6 +297,8 @@ html, body {
 .rte-prosemirror li { margin: 0 0 2px; }
 .rte-prosemirror h1, .rte-prosemirror h2, .rte-prosemirror h3 { color: var(--text); line-height: 1.25; }
 .rte-prosemirror a { color: var(--accent); }
+.rte-prosemirror img { max-width: 100%; height: auto; border-radius: 4px; display: block; margin: 6px 0; }
+.rte-prosemirror img.ProseMirror-selectednode { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .rte-prosemirror p[data-indent="1"], .rte-prosemirror li[data-indent="1"] { margin-left: 24px; }
 .rte-prosemirror p[data-indent="2"], .rte-prosemirror li[data-indent="2"] { margin-left: 48px; }

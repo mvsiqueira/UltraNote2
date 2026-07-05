@@ -1,5 +1,6 @@
-@implements IAsyncDisposable
+﻿@implements IAsyncDisposable
 @inject IJSRuntime JS
+@inject IUltraNoteApi Api
 
 @*
   TipTap-based rich-text editor (ported from the original Tauri/React UltraNotes app).
@@ -63,6 +64,7 @@
         <span class="rte-sep"></span>
         <button type="button" title="Link" @onclick="InsertLink"><i class="ti ti-link" aria-hidden="true"></i></button>
         <button type="button" title="Tabela" @onclick='() => Exec("insertTable")'><i class="ti ti-table" aria-hidden="true"></i></button>
+        <button type="button" title="Inserir imagem" @onclick="InsertImageFromFile" disabled="@(NoteId is null)"><i class="ti ti-photo" aria-hidden="true"></i></button>
     </div>
 
     <div @ref="_surface" class="rte-surface"></div>
@@ -116,11 +118,9 @@
     private string _highlightColor = "#fff2a8";
     private CtxMenu? _ctxMenu;
 
-    /// <summary>Content to display. Changing it (e.g. switching notes) re-loads the surface.</summary>
     [Parameter] public string? Html { get; set; }
-
-    /// <summary>Raised whenever the user edits the content.</summary>
     [Parameter] public EventCallback OnChanged { get; set; }
+    [Parameter] public Guid? NoteId { get; set; }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -153,6 +153,30 @@
     {
         var url = await JS.InvokeAsync<string>("prompt", "URL do link:");
         if (!string.IsNullOrWhiteSpace(url)) await Exec("link", url);
+    }
+
+    private async Task InsertImageFromFile()
+    {
+        if (_module is null) return;
+        await _module.InvokeVoidAsync("insertImageFromFile", _surface, _selfRef);
+    }
+
+    [JSInvokable]
+    public async Task<string?> UploadImageAsync(string base64, string fileName, string contentType)
+    {
+        if (NoteId is null) return null;
+        try
+        {
+            var bytes = Convert.FromBase64String(base64);
+            using var stream = new MemoryStream(bytes);
+            var dto = await Api.UploadAttachmentAsync(NoteId.Value, fileName, contentType, stream);
+            return Api.GetAttachmentUrl(dto.Id);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[UltraNote] Image upload failed: {ex.Message}");
+            return null;
+        }
     }
 
     private void ToggleColorMenu(string which) => _activeColorMenu = _activeColorMenu == which ? null : which;
