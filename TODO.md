@@ -20,7 +20,8 @@ Backlog de evolução. Marque `[x]` ao concluir. Prioridade sugerida de cima par
   - [x] **Cores** de fonte e **realce** (highlight), com paleta + seletor de cor customizada.
   - [x] **Indentação** (aumentar/diminuir recuo, `data-indent` attribute).
   - [x] Menu de contexto (botão direito): formatação sempre; operações de tabela só dentro de uma tabela.
-- [ ] **Colar imagem** no editor → upload via API de anexos → embutir no HTML (a API já suporta anexos; falta o front usar). Não fazia parte do app original — feature nova.
+- [x] **Colar/dropar/toolbar imagem** no editor → upload via API → embutida no HTML com suporte a redimensionamento e menu de contexto (excluir imagem).
+- [ ] **Anexos no corpo da nota** — inserir arquivos não-imagem como um "file node" inline no TipTap: bloco com ícone + nome + link de download embutido no HTML da nota (hoje os anexos ficam em painel separado abaixo do editor).
 - [ ] **Remover formatação** — botão na toolbar que limpa todas as marcas (negrito, cor, realce, etc.) do texto selecionado.
 - [ ] **Melhorar menu de contexto** — revisar itens, agrupar melhor, adicionar ícones mais claros.
 - [ ] **Melhorar color picker** — paleta mais rica, preview em tempo real, histórico de cores usadas.
@@ -31,6 +32,7 @@ Backlog de evolução. Marque `[x]` ao concluir. Prioridade sugerida de cima par
 - [x] **Renomear pasta** — menu de contexto.
 - [x] **Buscar** notas (por título) — caixa de busca na barra superior.
 - [x] **Mover** nota/pasta — menu de contexto "Mover...", modal com seletor de destino (pastas descendentes excluídas para evitar ciclo).
+- [ ] **Salvar estado** (pastas abertas e fechadas e nota selecionada)
 - [ ] **Importar do Evernote** — importar arquivo `.enex` (formato de exportação do Evernote): criar pastas/notas preservando estrutura e conteúdo HTML.
 
 ## 3. UX e robustez
