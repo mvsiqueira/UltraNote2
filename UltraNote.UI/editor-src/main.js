@@ -444,11 +444,14 @@ export function attach(el, dotNetRef) {
         }
     };
     const onDrop = async (e) => {
-        const files = Array.from(e.dataTransfer?.files ?? []).filter(f => f.type.startsWith("image/"));
-        if (files.length === 0) return;
+        const all = Array.from(e.dataTransfer?.files ?? []);
+        if (all.length === 0) return;
         e.preventDefault();
         e.stopPropagation();
-        for (const file of files) await uploadAndInsert(file, editor, dotNetRef);
+        const images = all.filter(f => f.type.startsWith("image/"));
+        const others = all.filter(f => !f.type.startsWith("image/"));
+        for (const file of images) await uploadAndInsert(file, editor, dotNetRef);
+        for (const file of others) await uploadFileOnly(file, dotNetRef);
     };
     proseMirror.addEventListener("paste", onPaste);
     proseMirror.addEventListener("drop", onDrop);
@@ -511,6 +514,15 @@ function fileToBase64(file) {
         reader.onerror = reject;
         reader.readAsDataURL(file);
     });
+}
+
+async function uploadFileOnly(file, dotNetRef) {
+    try {
+        const base64 = await fileToBase64(file);
+        await dotNetRef.invokeMethodAsync("UploadFileAsync", base64, file.name, file.type);
+    } catch (err) {
+        console.error("[UltraNote] File upload failed", err);
+    }
 }
 
 async function uploadAndInsert(file, editor, dotNetRef) {

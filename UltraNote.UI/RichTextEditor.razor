@@ -127,6 +127,7 @@
 
     [Parameter] public string? Html { get; set; }
     [Parameter] public EventCallback OnChanged { get; set; }
+    [Parameter] public EventCallback OnAttachmentAdded { get; set; }
     [Parameter] public Guid? NoteId { get; set; }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -183,6 +184,23 @@
         {
             Console.Error.WriteLine($"[UltraNote] Image upload failed: {ex.Message}");
             return null;
+        }
+    }
+
+    [JSInvokable]
+    public async Task UploadFileAsync(string base64, string fileName, string contentType)
+    {
+        if (NoteId is null) return;
+        try
+        {
+            var bytes = Convert.FromBase64String(base64);
+            using var stream = new MemoryStream(bytes);
+            await Api.UploadAttachmentAsync(NoteId.Value, fileName, contentType, stream);
+            await OnAttachmentAdded.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[UltraNote] File upload failed: {ex.Message}");
         }
     }
 

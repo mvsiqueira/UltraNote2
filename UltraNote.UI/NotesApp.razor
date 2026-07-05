@@ -84,7 +84,7 @@
                     <button class="btn-accent" @onclick="SaveNote" disabled="@_saving">@(_saving ? "Salvando…" : _dirty ? "Salvar *" : "Salvar")</button>
                 </div>
                 <div class="editor-meta">@_meta</div>
-                <RichTextEditor @ref="_editor" Html="@_selectedNote.ContentHtml" OnChanged="MarkDirty" NoteId="@_selectedNote.Id" />
+                <RichTextEditor @ref="_editor" Html="@_selectedNote.ContentHtml" OnChanged="MarkDirty" NoteId="@_selectedNote.Id" OnAttachmentAdded="LoadAttachments" />
                 <div class="attachments-bar">
                     <div class="attachments-header">
                         <i class="ti ti-paperclip" aria-hidden="true"></i>
