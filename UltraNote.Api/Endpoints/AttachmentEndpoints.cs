@@ -36,6 +36,20 @@ public static class AttachmentEndpoints
             .WithTags("Attachments")
             .DisableAntiforgery();
 
+        // List attachments for a note.
+        api.MapGet("/notes/{noteId:guid}/attachments",
+            async (Guid noteId, AppDbContext db, CancellationToken ct) =>
+            {
+                if (!await db.Notes.AnyAsync(n => n.Id == noteId, ct))
+                    return Results.NotFound("Note not found.");
+                var list = await db.Attachments
+                    .Where(a => a.NoteId == noteId)
+                    .OrderBy(a => a.FileName)
+                    .ToListAsync(ct);
+                return Results.Ok(list.Select(ToDto));
+            })
+            .WithTags("Attachments");
+
         var g = api.MapGroup("/attachments").WithTags("Attachments");
 
         // Download the binary.

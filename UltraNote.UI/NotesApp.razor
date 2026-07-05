@@ -85,6 +85,38 @@
                 </div>
                 <div class="editor-meta">@_meta</div>
                 <RichTextEditor @ref="_editor" Html="@_selectedNote.ContentHtml" OnChanged="MarkDirty" NoteId="@_selectedNote.Id" />
+                <div class="attachments-bar">
+                    <div class="attachments-header">
+                        <i class="ti ti-paperclip" aria-hidden="true"></i>
+                        <span>Anexos</span>
+                        @if (_attachments.Count > 0)
+                        {
+                            <span class="attachments-count">@_attachments.Count</span>
+                        }
+                        <label class="icon-btn att-add-btn" title="Anexar arquivo">
+                            <i class="ti ti-plus" aria-hidden="true"></i>
+                            <InputFile style="display:none" OnChange="AttachFiles" multiple accept="*/*" />
+                        </label>
+                    </div>
+                    @if (_attachments.Count > 0)
+                    {
+                        <div class="attachments-list">
+                            @foreach (var att in _attachments)
+                            {
+                                <div class="attachment-item">
+                                    <i class="ti @FileIcon(att.ContentType)" aria-hidden="true"></i>
+                                    <span class="att-name" title="@att.FileName">@att.FileName</span>
+                                    <a class="icon-btn" href="@att.Url" target="_blank" title="Baixar"><i class="ti ti-download" aria-hidden="true"></i></a>
+                                    <button class="icon-btn danger" title="Excluir anexo" @onclick="() => DeleteAttachment(att)"><i class="ti ti-trash" aria-hidden="true"></i></button>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="empty att-empty">Nenhum arquivo anexado.</p>
+                    }
+                </div>
             }
             else if (!_treeSelectionIsNote && _selectedFolderId is not null)
             {
@@ -201,6 +233,7 @@
     private bool _treeSelectionIsNote;
     private NoteDto? _selectedNote;
     private RichTextEditor? _editor;
+    private List<AttachmentDto> _attachments = new();
     private string _title = "";
     private string _meta = "";
     private bool _dirty;
@@ -309,6 +342,7 @@
             else { _status = "Nota não encontrada."; }
         }
         catch (Exception ex) { _status = $"Erro ao abrir nota: {ex.Message}"; }
+        await LoadAttachments();
         StateHasChanged();
     }
 
@@ -651,6 +685,7 @@
         _treeSelectionIsNote = false;
         _title = "";
         _meta = "";
+        _attachments.Clear();
         await SetDirty(false);
     }
 
@@ -667,6 +702,58 @@
         text = System.Net.WebUtility.HtmlDecode(text);
         return text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
     }
+
+    // ---------- Attachments ----------
+    private async Task LoadAttachments()
+    {
+        if (_selectedNote is null) { _attachments.Clear(); return; }
+        try
+        {
+            var all = await Api.GetAttachmentsAsync(_selectedNote.Id);
+            _attachments = all.Where(a => !a.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                              .ToList();
+        }
+        catch { _attachments.Clear(); }
+    }
+
+    private async Task AttachFiles(InputFileChangeEventArgs e)
+    {
+        if (_selectedNote is null) return;
+        foreach (var file in e.GetMultipleFiles(20))
+        {
+            try
+            {
+                await using var stream = file.OpenReadStream(maxAllowedSize: 100 * 1024 * 1024);
+                var dto = await Api.UploadAttachmentAsync(_selectedNote.Id, file.Name, file.ContentType, stream);
+                if (!dto.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                    _attachments.Add(dto);
+            }
+            catch (Exception ex) { _status = $"Erro ao anexar {file.Name}: {ex.Message}"; }
+        }
+        StateHasChanged();
+    }
+
+    private async Task DeleteAttachment(AttachmentDto att)
+    {
+        if (!await Confirm($"Excluir o anexo \"{att.FileName}\"?")) return;
+        try
+        {
+            await Api.DeleteAttachmentAsync(att.Id);
+            _attachments.Remove(att);
+            StateHasChanged();
+        }
+        catch (Exception ex) { _status = $"Erro ao excluir anexo: {ex.Message}"; }
+    }
+
+    private static string FileIcon(string ct) => ct switch
+    {
+        _ when ct.Contains("pdf") => "ti-file-type-pdf",
+        _ when ct.Contains("word") || ct.Contains("document") => "ti-file-type-doc",
+        _ when ct.Contains("sheet") || ct.Contains("excel") || ct.Contains("spreadsheet") => "ti-file-type-xls",
+        _ when ct.Contains("zip") || ct.Contains("compressed") || ct.Contains("x-tar") => "ti-file-zip",
+        _ when ct.Contains("text/") => "ti-file-text",
+        _ => "ti-file",
+    };
 
     private async Task<string?> Prompt(string message, string? def = null) =>
         await JS.InvokeAsync<string?>("prompt", message, def ?? "");

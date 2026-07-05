@@ -63,6 +63,9 @@ public class UltraNoteApiClient(HttpClient http) : IUltraNoteApi
     public async Task DeleteNoteAsync(Guid id, CancellationToken ct = default) =>
         (await http.DeleteAsync($"api/notes/{id}", ct)).EnsureSuccessStatusCode();
 
+    public async Task<IReadOnlyList<AttachmentDto>> GetAttachmentsAsync(Guid noteId, CancellationToken ct = default) =>
+        await http.GetFromJsonAsync<List<AttachmentDto>>($"api/notes/{noteId}/attachments", ct) ?? [];
+
     public async Task<AttachmentDto> UploadAttachmentAsync(
         Guid noteId, string fileName, string contentType, Stream content, CancellationToken ct = default)
     {
