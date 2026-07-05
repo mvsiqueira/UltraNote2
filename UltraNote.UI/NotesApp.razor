@@ -88,7 +88,7 @@
             }
             else if (!_treeSelectionIsNote && _selectedFolderId is not null)
             {
-                @{ var folderNotes = NotesOf(_selectedFolderId.Value) ?? new List<NoteSummaryDto>(); }
+                var folderNotes = NotesOf(_selectedFolderId.Value) ?? new List<NoteSummaryDto>();
                 <div class="folder-view">
                     <div class="folder-view-header">
                         <i class="ti ti-folder" aria-hidden="true"></i>
