@@ -1,4 +1,4 @@
-@inject IUltraNoteApi Api
+﻿@inject IUltraNoteApi Api
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
@@ -30,51 +30,43 @@
     </header>
 
     <div class="body">
-        <aside class=”sidebar”>
-            <div class=”sidebar-toolbar”>
-                <button class=”icon-btn” title=”Nova pasta” @onclick=”() => NewFolder(null)”>
-                    <i class=”ti ti-folder-plus” aria-hidden=”true”></i>
-                </button>
-                <button class=”icon-btn” title=”Nova nota na pasta selecionada”
-                        @onclick=”() => GuardUnsaved(() => NewNote(_selectedFolderId))”
-                        disabled=”@(_selectedFolderId is null)”>
-                    <i class=”ti ti-file-plus” aria-hidden=”true”></i>
-                </button>
-                <span class=”sidebar-toolbar-spacer”></span>
-                <button class=”icon-btn” title=”Recolher tudo” @onclick=”CollapseAll”>
-                    <i class=”ti ti-layout-sidebar-left-collapse” aria-hidden=”true”></i>
-                </button>
+        <aside class="sidebar">
+            <div class="sidebar-toolbar">
+                <button class="icon-btn" title="Nova pasta" @onclick="ToolbarNewFolder"><i class="ti ti-folder-plus" aria-hidden="true"></i></button>
+                <button class="icon-btn" title="Nova nota" @onclick="ToolbarNewNote" disabled="@(_selectedFolderId is null)"><i class="ti ti-file-plus" aria-hidden="true"></i></button>
+                <span class="sidebar-toolbar-spacer"></span>
+                <button class="icon-btn" title="Recolher tudo" @onclick="CollapseAll"><i class="ti ti-layout-sidebar-left-collapse" aria-hidden="true"></i></button>
             </div>
-            <div class=”sidebar-content”>
+            <div class="sidebar-content">
                 @if (string.IsNullOrWhiteSpace(_query))
                 {
-                    <CascadingValue Value=”this”>
+                    <CascadingValue Value="this">
                         @foreach (var root in ChildrenOf(null))
                         {
-                            <TreeNode Folder=”root” Depth=”0” />
+                            <TreeNode Folder="root" Depth="0" />
                         }
                     </CascadingValue>
                     @if (_folders.Count == 0)
                     {
-                        <p class=”empty”>Crie sua primeira pasta no botão “+”.</p>
+                        <p class="empty">Crie sua primeira pasta no botão "+".</p>
                     }
                 }
                 else
                 {
                     @foreach (var n in _searchResults)
                     {
-                        <div class=”tree-note @(n.Id == SelectedNoteId ? “active” : “”)”
-                             @onclick=”() => RequestSelectNote(n.Id)”
-                             @oncontextmenu:preventDefault=”true”
-                             @oncontextmenu=”(e) => OpenNoteMenu(n, e)”>
-                            <i class=”ti ti-file-text note-ico” aria-hidden=”true”></i>
-                            <span class=”tree-label”>@n.Title</span>
-                            <span class=”result-folder”>@(FolderById(n.FolderId)?.Name)</span>
+                        <div class="tree-note @(n.Id == SelectedNoteId ? "active" : "")"
+                             @onclick="() => RequestSelectNote(n.Id)"
+                             @oncontextmenu:preventDefault="true"
+                             @oncontextmenu="(e) => OpenNoteMenu(n, e)">
+                            <i class="ti ti-file-text note-ico" aria-hidden="true"></i>
+                            <span class="tree-label">@n.Title</span>
+                            <span class="result-folder">@(FolderById(n.FolderId)?.Name)</span>
                         </div>
                     }
                     @if (_searchResults.Count == 0)
                     {
-                        <p class=”empty”>Nada encontrado.</p>
+                        <p class="empty">Nada encontrado.</p>
                     }
                 }
             </div>
@@ -515,6 +507,8 @@
             .ToList();
     }
 
+    private Task ToolbarNewFolder() => NewFolder(null);
+    private void ToolbarNewNote() => GuardUnsaved(() => NewNote(_selectedFolderId));
     private void CollapseAll() { _expanded.Clear(); StateHasChanged(); }
 
     // ---------- Theme ----------
