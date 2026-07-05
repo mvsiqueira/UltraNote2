@@ -34,8 +34,8 @@
             <div class="sidebar-toolbar">
                 <button class="icon-btn" title="Nova pasta" @onclick="ToolbarNewFolder"><i class="ti ti-folder-plus" aria-hidden="true"></i></button>
                 <button class="icon-btn" title="Nova nota" @onclick="ToolbarNewNote" disabled="@(_selectedFolderId is null)"><i class="ti ti-file-plus" aria-hidden="true"></i></button>
-                <span class="sidebar-toolbar-spacer"></span>
-                <button class="icon-btn" title="Recolher tudo" @onclick="CollapseAll"><i class="ti ti-layout-sidebar-left-collapse" aria-hidden="true"></i></button>
+                <button class="icon-btn" title="Recolher tudo" @onclick="CollapseAll"><i class="ti ti-chevrons-left" aria-hidden="true"></i></button>
+                <button class="icon-btn" title="Expandir tudo" @onclick="ToolbarExpandAll"><i class="ti ti-chevrons-right" aria-hidden="true"></i></button>
             </div>
             <div class="sidebar-content">
                 @if (string.IsNullOrWhiteSpace(_query))
@@ -510,6 +510,11 @@
     private Task ToolbarNewFolder() => NewFolder(null);
     private void ToolbarNewNote() => GuardUnsaved(() => NewNote(_selectedFolderId));
     private void CollapseAll() { _expanded.Clear(); StateHasChanged(); }
+    private async Task ToolbarExpandAll()
+    {
+        foreach (var f in _folders) { _expanded.Add(f.Id); if (!_notes.ContainsKey(f.Id)) await LoadNotes(f.Id); }
+        StateHasChanged();
+    }
 
     // ---------- Theme ----------
     private async Task ToggleTheme()
