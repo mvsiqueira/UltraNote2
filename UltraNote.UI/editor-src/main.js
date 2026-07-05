@@ -453,8 +453,14 @@ export function attach(el, dotNetRef) {
         for (const file of images) await uploadAndInsert(file, editor, dotNetRef);
         for (const file of others) await uploadFileOnly(file, dotNetRef);
     };
+    // Use capture on the surface element so our handler fires before ProseMirror's bubble
+    // handler on proseMirror. This prevents stopImmediatePropagation from blocking us.
+    const onDragOver = (e) => {
+        if (e.dataTransfer?.types?.includes("Files")) e.preventDefault();
+    };
     proseMirror.addEventListener("paste", onPaste);
-    proseMirror.addEventListener("drop", onDrop);
+    el.addEventListener("dragover", onDragOver, { capture: true });
+    el.addEventListener("drop", onDrop, { capture: true });
 
     registry.set(el, {
         editor,
@@ -464,7 +470,8 @@ export function attach(el, dotNetRef) {
             document.removeEventListener("keyup", onKeyUp);
             window.removeEventListener("blur", onBlur);
             proseMirror.removeEventListener("paste", onPaste);
-            proseMirror.removeEventListener("drop", onDrop);
+            el.removeEventListener("dragover", onDragOver, { capture: true });
+            el.removeEventListener("drop", onDrop, { capture: true });
             proseMirror.removeEventListener("click", onImgClick);
             proseMirror.removeEventListener("scroll", onScroll);
             if (currentResizeEditor === editor) hideResizeHandle();

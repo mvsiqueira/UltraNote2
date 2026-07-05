@@ -85,7 +85,7 @@
                 </div>
                 <div class="editor-meta">@_meta</div>
                 <RichTextEditor @ref="_editor" Html="@_selectedNote.ContentHtml" OnChanged="MarkDirty" NoteId="@_selectedNote.Id" OnAttachmentAdded="LoadAttachments" />
-                <div class="attachments-bar">
+                <div class="attachments-bar" @ref="_attBar">
                     <div class="attachments-header">
                         <i class="ti ti-paperclip" aria-hidden="true"></i>
                         <span>Anexos</span>
@@ -255,7 +255,10 @@
     private IJSObjectReference? _themeJs;
     private IJSObjectReference? _unsavedJs;
     private IJSObjectReference? _shortcutsJs;
+    private IJSObjectReference? _dropZoneJs;
     private DotNetObjectReference<NotesApp>? _shortcutsRef;
+    private ElementReference _attBar;
+    private bool _dropZoneInitialized;
 
     public Guid? SelectedNoteId => _selectedNote?.Id;
     public Guid? SelectedFolderId => _selectedFolderId;
@@ -265,14 +268,31 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
-        _themeJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-theme.js");
-        _theme = await _themeJs.InvokeAsync<string>("getTheme");
-        _unsavedJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-unsaved.js");
-        _shortcutsJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-shortcuts.js");
-        _shortcutsRef = DotNetObjectReference.Create(this);
-        await _shortcutsJs.InvokeVoidAsync("init", _shortcutsRef);
-        StateHasChanged();
+        if (firstRender)
+        {
+            _themeJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-theme.js");
+            _theme = await _themeJs.InvokeAsync<string>("getTheme");
+            _unsavedJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-unsaved.js");
+            _shortcutsJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-shortcuts.js");
+            _dropZoneJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-dropzone.js");
+            _shortcutsRef = DotNetObjectReference.Create(this);
+            await _shortcutsJs.InvokeVoidAsync("init", _shortcutsRef);
+            StateHasChanged();
+        }
+
+        if (_dropZoneJs is not null && _shortcutsRef is not null)
+        {
+            if (_treeSelectionIsNote && _selectedNote is not null && !_dropZoneInitialized)
+            {
+                _dropZoneInitialized = true;
+                await _dropZoneJs.InvokeVoidAsync("init", _attBar, _shortcutsRef);
+            }
+            else if ((!_treeSelectionIsNote || _selectedNote is null) && _dropZoneInitialized)
+            {
+                _dropZoneInitialized = false;
+                await _dropZoneJs.InvokeVoidAsync("dispose", _attBar);
+            }
+        }
     }
 
     // ---------- Tree data (used by TreeNode) ----------
@@ -704,6 +724,22 @@
     }
 
     // ---------- Attachments ----------
+
+    [JSInvokable]
+    public async Task UploadFileAsync(string base64, string fileName, string contentType)
+    {
+        if (_selectedNote is null) return;
+        try
+        {
+            var bytes = Convert.FromBase64String(base64);
+            using var stream = new MemoryStream(bytes);
+            await Api.UploadAttachmentAsync(_selectedNote.Id, fileName, contentType, stream);
+            await LoadAttachments();
+            StateHasChanged();
+        }
+        catch (Exception ex) { _status = $"Erro ao anexar {fileName}: {ex.Message}"; StateHasChanged(); }
+    }
+
     private async Task LoadAttachments()
     {
         if (_selectedNote is null) { _attachments.Clear(); return; }
@@ -773,6 +809,11 @@
         if (_shortcutsJs is not null)
         {
             try { await _shortcutsJs.InvokeVoidAsync("dispose"); await _shortcutsJs.DisposeAsync(); } catch (JSDisconnectedException) { }
+        }
+        if (_dropZoneJs is not null)
+        {
+            try { if (_dropZoneInitialized) await _dropZoneJs.InvokeVoidAsync("dispose", _attBar); } catch (JSDisconnectedException) { }
+            try { await _dropZoneJs.DisposeAsync(); } catch (JSDisconnectedException) { }
         }
         _shortcutsRef?.Dispose();
     }

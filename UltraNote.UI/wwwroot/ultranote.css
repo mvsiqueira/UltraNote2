@@ -560,3 +560,8 @@ body.row-resize-cursor, body.row-resize-cursor * { cursor: row-resize !important
   white-space: nowrap;
 }
 .att-empty { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+.attachments-bar.drop-target {
+  outline: 2px dashed var(--accent);
+  outline-offset: -4px;
+  background: var(--accent-soft);
+}
