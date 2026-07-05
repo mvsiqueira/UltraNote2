@@ -84,7 +84,7 @@
                     <button class="btn-accent" @onclick="SaveNote" disabled="@_saving">@(_saving ? "Salvando…" : _dirty ? "Salvar *" : "Salvar")</button>
                 </div>
                 <div class="editor-meta">@_meta</div>
-                <RichTextEditor @ref="_editor" Html="@_selectedNote.ContentHtml" OnChanged="MarkDirty" NoteId="@_selectedNote.Id" OnAttachmentAdded="LoadAttachments" />
+                <RichTextEditor @ref="_editor" Html="@_selectedNote.ContentHtml" OnChanged="MarkDirty" NoteId="@_selectedNote.Id" OnAttachmentAdded="LoadAttachments" ExistingAttachments="_attachments" />
                 <div class="attachments-bar" @ref="_attBar">
                     <div class="attachments-header">
                         <i class="ti ti-paperclip" aria-hidden="true"></i>
@@ -731,6 +731,14 @@
         if (_selectedNote is null) return;
         try
         {
+            var existing = _attachments.FirstOrDefault(a =>
+                string.Equals(a.FileName, fileName, StringComparison.OrdinalIgnoreCase));
+            if (existing is not null)
+            {
+                if (!await Confirm($"Já existe um anexo chamado \"{fileName}\". Deseja substituir?"))
+                    return;
+                try { await Api.DeleteAttachmentAsync(existing.Id); } catch { }
+            }
             var bytes = Convert.FromBase64String(base64);
             using var stream = new MemoryStream(bytes);
             await Api.UploadAttachmentAsync(_selectedNote.Id, fileName, contentType, stream);
@@ -759,6 +767,15 @@
         {
             try
             {
+                var existing = _attachments.FirstOrDefault(a =>
+                    string.Equals(a.FileName, file.Name, StringComparison.OrdinalIgnoreCase));
+                if (existing is not null)
+                {
+                    if (!await Confirm($"Já existe um anexo chamado \"{file.Name}\". Deseja substituir?"))
+                        continue;
+                    try { await Api.DeleteAttachmentAsync(existing.Id); } catch { }
+                    _attachments.Remove(existing);
+                }
                 await using var stream = file.OpenReadStream(maxAllowedSize: 100 * 1024 * 1024);
                 var dto = await Api.UploadAttachmentAsync(_selectedNote.Id, file.Name, file.ContentType, stream);
                 if (!dto.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))

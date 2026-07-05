@@ -129,6 +129,7 @@
     [Parameter] public EventCallback OnChanged { get; set; }
     [Parameter] public EventCallback OnAttachmentAdded { get; set; }
     [Parameter] public Guid? NoteId { get; set; }
+    [Parameter] public IReadOnlyList<AttachmentDto>? ExistingAttachments { get; set; }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -193,6 +194,15 @@
         if (NoteId is null) return;
         try
         {
+            var existing = ExistingAttachments?.FirstOrDefault(a =>
+                string.Equals(a.FileName, fileName, StringComparison.OrdinalIgnoreCase));
+            if (existing is not null)
+            {
+                var ok = await JS.InvokeAsync<bool>("confirm",
+                    $"Já existe um anexo chamado \"{fileName}\". Deseja substituir?");
+                if (!ok) return;
+                try { await Api.DeleteAttachmentAsync(existing.Id); } catch { }
+            }
             var bytes = Convert.FromBase64String(base64);
             using var stream = new MemoryStream(bytes);
             await Api.UploadAttachmentAsync(NoteId.Value, fileName, contentType, stream);

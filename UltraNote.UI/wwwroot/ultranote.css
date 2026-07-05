@@ -541,7 +541,7 @@ body.row-resize-cursor, body.row-resize-cursor * { cursor: row-resize !important
   border-radius: 99px;
 }
 .att-add-btn { margin-left: auto; cursor: pointer; }
-.attachments-list { display: flex; flex-direction: column; gap: 2px; }
+.attachments-list { display: flex; flex-direction: column; gap: 2px; max-height: 110px; overflow-y: auto; }
 .attachment-item {
   display: flex;
   align-items: center;

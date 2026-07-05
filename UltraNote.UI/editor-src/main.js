@@ -448,6 +448,9 @@ export function attach(el, dotNetRef) {
         if (all.length === 0) return;
         e.preventDefault();
         e.stopPropagation();
+        // Tell ProseMirror to dismiss its drop-cursor indicator (our stopPropagation
+        // prevents it from seeing the real drop event, so the cursor would otherwise stay).
+        proseMirror.dispatchEvent(new DragEvent('dragleave', { bubbles: true }));
         const images = all.filter(f => f.type.startsWith("image/"));
         const others = all.filter(f => !f.type.startsWith("image/"));
         for (const file of images) await uploadAndInsert(file, editor, dotNetRef);
