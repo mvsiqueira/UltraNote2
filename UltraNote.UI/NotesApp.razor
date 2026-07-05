@@ -35,6 +35,7 @@
                 <button class="icon-btn" title="Nova nota" @onclick="ToolbarNewNote" disabled="@(_selectedFolderId is null)"><i class="ti ti-file-plus" aria-hidden="true"></i></button>
                 <button class="icon-btn" title="Recolher tudo" @onclick="CollapseAll"><i class="ti ti-chevrons-left" aria-hidden="true"></i></button>
                 <button class="icon-btn" title="Expandir tudo" @onclick="ToolbarExpandAll"><i class="ti ti-chevrons-right" aria-hidden="true"></i></button>
+                <button class="icon-btn danger" title="Excluir" @onclick="ToolbarDelete" disabled="@(!CanToolbarDelete)"><i class="ti ti-trash" aria-hidden="true"></i></button>
             </div>
             <div class="sidebar-content">
                 @if (string.IsNullOrWhiteSpace(_query))
@@ -46,7 +47,7 @@
                     <CascadingValue Value="this">
                         @foreach (var root in ChildrenOf(null))
                         {
-                            <TreeNode Folder="root" Depth="1" />
+                            <TreeNode Folder="root" Depth="0" />
                         }
                     </CascadingValue>
                     @if (_folders.Count == 0)
@@ -170,6 +171,7 @@
     private readonly Dictionary<Guid, List<NoteSummaryDto>> _notes = new();
 
     private Guid? _selectedFolderId;
+    private bool _treeSelectionIsNote;
     private NoteDto? _selectedNote;
     private RichTextEditor? _editor;
     private string _title = "";
@@ -220,6 +222,7 @@
     public async Task ToggleFolder(FolderDto folder)
     {
         _selectedFolderId = folder.Id;
+        _treeSelectionIsNote = false;
         if (!_expanded.Add(folder.Id)) { _expanded.Remove(folder.Id); StateHasChanged(); return; }
         if (!_notes.ContainsKey(folder.Id)) await LoadNotes(folder.Id);
         StateHasChanged();
@@ -249,6 +252,7 @@
 
     private async Task SelectNoteNow(Guid id)
     {
+        _treeSelectionIsNote = true;
         try
         {
             _selectedNote = await Api.GetNoteAsync(id);
@@ -511,10 +515,39 @@
             .ToList();
     }
 
-    private void SelectRoot() { _selectedFolderId = null; StateHasChanged(); }
+    private void SelectRoot() { _selectedFolderId = null; _treeSelectionIsNote = false; StateHasChanged(); }
     private Task ToolbarNewFolder() => NewFolder(_selectedFolderId);
     private void ToolbarNewNote() => GuardUnsaved(() => NewNote(_selectedFolderId));
     private void CollapseAll() { _expanded.Clear(); StateHasChanged(); }
+
+    private bool CanToolbarDelete =>
+        (_treeSelectionIsNote && _selectedNote is not null) ||
+        (!_treeSelectionIsNote && _selectedFolderId is not null);
+
+    private async Task ToolbarDelete()
+    {
+        if (_treeSelectionIsNote && _selectedNote is not null)
+        {
+            var note = _selectedNote;
+            if (!await Confirm($"Excluir a nota \"{note.Title}\"?")) return;
+            try
+            {
+                await Api.DeleteNoteAsync(note.Id);
+                if (_notes.ContainsKey(note.FolderId)) await LoadNotes(note.FolderId);
+                await ClearEditor();
+                if (!string.IsNullOrWhiteSpace(_query)) await RunSearch();
+                _status = $"Nota excluida: {note.Title}";
+            }
+            catch (Exception ex) { _status = $"Erro ao excluir: {ex.Message}"; }
+        }
+        else if (_selectedFolderId is not null)
+        {
+            var folder = _folders.FirstOrDefault(f => f.Id == _selectedFolderId);
+            if (folder is null) return;
+            await DeleteFolder(folder);
+        }
+    }
+
     private async Task ToolbarExpandAll()
     {
         foreach (var f in _folders) { _expanded.Add(f.Id); if (!_notes.ContainsKey(f.Id)) await LoadNotes(f.Id); }

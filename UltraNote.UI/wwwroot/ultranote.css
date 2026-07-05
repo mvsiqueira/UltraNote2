@@ -153,6 +153,8 @@ html, body {
 }
 .sidebar-toolbar .icon-btn { width: 28px; height: 28px; font-size: 16px; }
 .sidebar-toolbar .icon-btn:disabled { opacity: 0.35; cursor: default; }
+.sidebar-toolbar .icon-btn.danger { color: var(--danger, #e53e3e); margin-left: auto; }
+.sidebar-toolbar .icon-btn.danger:hover { background: color-mix(in srgb, var(--danger, #e53e3e) 12%, transparent); }
 .sidebar-toolbar-spacer { flex: 1; }
 .sidebar-content {
   flex: 1;
