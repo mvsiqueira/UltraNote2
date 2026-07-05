@@ -1,10 +1,11 @@
 ﻿@* Recursive tree node: a folder row, then (when expanded) its subfolders and its notes. *@
 
 <div class="tree-row @(Owner.SelectedFolderId == Folder.Id && !Owner.TreeSelectionIsNote ? "active" : "")" style="padding-left:@(8 + Depth * 15)px"
-     @onclick="() => Owner.ToggleFolder(Folder)"
+     @onclick="() => Owner.SelectFolder(Folder)"
      @oncontextmenu:preventDefault="true"
      @oncontextmenu="(e) => Owner.OpenFolderMenu(Folder, e)">
-    <i class="ti @(Owner.IsExpanded(Folder.Id) ? "ti-chevron-down" : "ti-chevron-right") chevron" aria-hidden="true"></i>
+    <i class="ti @(Owner.IsExpanded(Folder.Id) ? "ti-chevron-down" : "ti-chevron-right") chevron" aria-hidden="true"
+       @onclick:stopPropagation="true" @onclick="() => Owner.ToggleExpand(Folder)"></i>
     <i class="ti ti-folder folder-ico" aria-hidden="true"></i>
     <span class="tree-label">@Folder.Name</span>
 </div>
