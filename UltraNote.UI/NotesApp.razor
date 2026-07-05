@@ -77,7 +77,7 @@
         </aside>
 
         <section class="editor-panel">
-            @if (_selectedNote is not null)
+            @if (_treeSelectionIsNote && _selectedNote is not null)
             {
                 <div class="editor-head">
                     <input class="title-input" @bind="_title" @bind:event="oninput" />
@@ -86,9 +86,36 @@
                 <div class="editor-meta">@_meta</div>
                 <RichTextEditor @ref="_editor" Html="@_selectedNote.ContentHtml" OnChanged="MarkDirty" />
             }
+            else if (!_treeSelectionIsNote && _selectedFolderId is not null)
+            {
+                @{ var folderNotes = NotesOf(_selectedFolderId.Value) ?? new List<NoteSummaryDto>(); }
+                <div class="folder-view">
+                    <div class="folder-view-header">
+                        <i class="ti ti-folder" aria-hidden="true"></i>
+                        <span>@(FolderById(_selectedFolderId.Value)?.Name ?? "")</span>
+                        <span class="folder-view-count">@folderNotes.Count nota@(folderNotes.Count == 1 ? "" : "s")</span>
+                    </div>
+                    @if (folderNotes.Count > 0)
+                    {
+                        <div class="folder-view-list">
+                            @foreach (var note in folderNotes)
+                            {
+                                <div class="folder-view-item" @onclick="() => RequestSelectNote(note.Id)">
+                                    <i class="ti ti-file-text" aria-hidden="true"></i>
+                                    <span>@note.Title</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="empty">Nenhuma nota nesta pasta.</p>
+                    }
+                </div>
+            }
             else
             {
-                <div class="editor-empty">Selecione ou crie uma nota para começar.</div>
+                <div class="editor-empty">Selecione uma pasta ou nota para começar.</div>
             }
             <footer class="statusbar">@_status</footer>
         </section>
@@ -199,6 +226,7 @@
 
     public Guid? SelectedNoteId => _selectedNote?.Id;
     public Guid? SelectedFolderId => _selectedFolderId;
+    public bool TreeSelectionIsNote => _treeSelectionIsNote;
 
     protected override async Task OnInitializedAsync() => await LoadFolders();
 
@@ -219,8 +247,15 @@
     public bool IsExpanded(Guid id) => _expanded.Contains(id);
     public List<NoteSummaryDto>? NotesOf(Guid id) => _notes.TryGetValue(id, out var l) ? l : null;
 
-    public async Task ToggleFolder(FolderDto folder)
+    public async Task ToggleFolder(FolderDto folder) => await SelectFolderNow(folder);
+
+    private async Task SelectFolderNow(FolderDto folder)
     {
+        if (_dirty) { _pendingAction = () => SelectFolderNow(folder); StateHasChanged(); return; }
+        _selectedNote = null;
+        _title = "";
+        _meta = "";
+        await SetDirty(false);
         _selectedFolderId = folder.Id;
         _treeSelectionIsNote = false;
         if (!_expanded.Add(folder.Id)) { _expanded.Remove(folder.Id); StateHasChanged(); return; }
@@ -388,6 +423,11 @@
             _expanded.Remove(folder.Id);
             if (_selectedNote is not null && IsUnder(_selectedNote.FolderId, folder)) await ClearEditor();
             await LoadFolders();
+            if (_selectedFolderId.HasValue && FolderById(_selectedFolderId.Value) is null)
+            {
+                _selectedFolderId = null;
+                _treeSelectionIsNote = false;
+            }
             _status = $"Pasta excluída: {folder.Name}";
         }
         catch (Exception ex) { _status = $"Erro ao excluir: {ex.Message}"; }
@@ -515,7 +555,27 @@
             .ToList();
     }
 
-    private void SelectRoot() { _selectedFolderId = null; _treeSelectionIsNote = false; StateHasChanged(); }
+    private void SelectRoot()
+    {
+        if (_dirty) { _pendingAction = SelectRootNow; StateHasChanged(); return; }
+        _selectedFolderId = null;
+        _selectedNote = null;
+        _title = "";
+        _meta = "";
+        _treeSelectionIsNote = false;
+        StateHasChanged();
+    }
+
+    private async Task SelectRootNow()
+    {
+        _selectedFolderId = null;
+        _selectedNote = null;
+        _title = "";
+        _meta = "";
+        _treeSelectionIsNote = false;
+        await SetDirty(false);
+        StateHasChanged();
+    }
     private Task ToolbarNewFolder() => NewFolder(_selectedFolderId);
     private void ToolbarNewNote() => GuardUnsaved(() => NewNote(_selectedFolderId));
     private void CollapseAll() { _expanded.Clear(); StateHasChanged(); }
@@ -581,6 +641,7 @@
     private async Task ClearEditor()
     {
         _selectedNote = null;
+        _treeSelectionIsNote = false;
         _title = "";
         _meta = "";
         await SetDirty(false);

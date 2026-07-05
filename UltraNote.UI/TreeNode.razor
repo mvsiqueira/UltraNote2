@@ -1,6 +1,6 @@
 ﻿@* Recursive tree node: a folder row, then (when expanded) its subfolders and its notes. *@
 
-<div class="tree-row @(Owner.SelectedFolderId == Folder.Id ? "active" : "")" style="padding-left:@(8 + Depth * 15)px"
+<div class="tree-row @(Owner.SelectedFolderId == Folder.Id && !Owner.TreeSelectionIsNote ? "active" : "")" style="padding-left:@(8 + Depth * 15)px"
      @onclick="() => Owner.ToggleFolder(Folder)"
      @oncontextmenu:preventDefault="true"
      @oncontextmenu="(e) => Owner.OpenFolderMenu(Folder, e)">
