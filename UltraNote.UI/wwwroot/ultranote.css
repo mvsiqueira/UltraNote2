@@ -138,6 +138,24 @@ html, body {
 .sidebar {
   background: var(--panel-2);
   border-right: 1px solid var(--border-soft);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.sidebar-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--border-soft);
+  flex-shrink: 0;
+}
+.sidebar-toolbar .icon-btn { width: 28px; height: 28px; font-size: 16px; }
+.sidebar-toolbar .icon-btn:disabled { opacity: 0.35; cursor: default; }
+.sidebar-toolbar-spacer { flex: 1; }
+.sidebar-content {
+  flex: 1;
   overflow-y: auto;
   padding: 8px 6px;
   min-height: 0;
