@@ -193,6 +193,7 @@
     private DotNetObjectReference<NotesApp>? _shortcutsRef;
 
     public Guid? SelectedNoteId => _selectedNote?.Id;
+    public Guid? SelectedFolderId => _selectedFolderId;
 
     protected override async Task OnInitializedAsync() => await LoadFolders();
 
