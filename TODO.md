@@ -40,7 +40,7 @@ Backlog de evolução. Marque `[x]` ao concluir. Prioridade sugerida de cima par
 - [x] Indicador de "salvando…" — botão mostra "Salvando…" e fica desabilitado durante a chamada.
 - [x] Atalho de teclado **Ctrl+S** (ou Cmd+S) salva a nota aberta, sem disparar o "Salvar página" do navegador.
 - [ ] **Adaptar para mobile** — layout responsivo: sidebar recolhível, toolbar do editor adaptada para toque, área de edição ocupa tela cheia.
-- [ ] **Barra de ferramentas acima da árvore** — ações rápidas (nova pasta, nova nota, recolher tudo) fixas no topo do painel lateral.
+- [x] **Barra de ferramentas acima da árvore** — ações rápidas (nova pasta, nova nota, recolher tudo, expandir tudo) + nó raiz "Notas" para criação de pastas na raiz.
 - [ ] **Tela de About** — versão do app, créditos, links (GitHub, etc.).
 
 ## 3b. Multiusuário (segregação de dados)

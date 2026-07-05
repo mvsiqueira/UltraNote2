@@ -178,6 +178,7 @@ html, body {
 .tree-row:hover, .tree-note:hover { background: var(--hover); }
 .tree-row.active { background: var(--hover); color: var(--text); }
 .tree-row.active .folder-ico { color: var(--accent); }
+.tree-root { font-weight: 500; margin-bottom: 2px; }
 .tree-note.active { background: var(--active); color: var(--accent-text); font-weight: 500; }
 .tree-row .chevron { font-size: 14px; color: var(--muted); width: 14px; flex-shrink: 0; }
 .tree-row .folder-ico { color: var(--accent); font-size: 16px; flex-shrink: 0; }

@@ -23,7 +23,6 @@
                 <i class="ti ti-search" aria-hidden="true"></i>
                 <input placeholder="Buscar notas…" value="@_query" @oninput="OnSearchInput" />
             </div>
-            <button class="icon-btn" title="Novo" @onclick="OpenNewMenu"><i class="ti ti-plus" aria-hidden="true"></i></button>
             <button class="icon-btn" title="Tema" @onclick="ToggleTheme"><i class="ti @(_theme == "dark" ? "ti-sun" : "ti-moon")" aria-hidden="true"></i></button>
             @TopBarUser
         </div>
@@ -40,15 +39,19 @@
             <div class="sidebar-content">
                 @if (string.IsNullOrWhiteSpace(_query))
                 {
+                    <div class="tree-row tree-root @(_selectedFolderId is null ? "active" : "")" @onclick="SelectRoot">
+                        <i class="ti ti-notebook folder-ico" aria-hidden="true"></i>
+                        <span class="tree-label">Notas</span>
+                    </div>
                     <CascadingValue Value="this">
                         @foreach (var root in ChildrenOf(null))
                         {
-                            <TreeNode Folder="root" Depth="0" />
+                            <TreeNode Folder="root" Depth="1" />
                         }
                     </CascadingValue>
                     @if (_folders.Count == 0)
                     {
-                        <p class="empty">Crie sua primeira pasta no botão "+".</p>
+                        <p class="empty">Use a barra de ferramentas para criar sua primeira pasta.</p>
                     }
                 }
                 else
@@ -508,7 +511,8 @@
             .ToList();
     }
 
-    private Task ToolbarNewFolder() => NewFolder(null);
+    private void SelectRoot() { _selectedFolderId = null; StateHasChanged(); }
+    private Task ToolbarNewFolder() => NewFolder(_selectedFolderId);
     private void ToolbarNewNote() => GuardUnsaved(() => NewNote(_selectedFolderId));
     private void CollapseAll() { _expanded.Clear(); StateHasChanged(); }
     private async Task ToolbarExpandAll()
