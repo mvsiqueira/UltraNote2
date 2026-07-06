@@ -60,7 +60,7 @@ public static class AttachmentEndpoints
             var stream = storage.OpenRead(att.StoragePath);
             return stream is null
                 ? Results.NotFound("File missing on disk.")
-                : Results.File(stream, att.ContentType, att.FileName);
+                : Results.File(stream, att.ContentType);
         });
 
         g.MapDelete("/{id:guid}", async (Guid id, AppDbContext db, IAttachmentStorage storage) =>
