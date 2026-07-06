@@ -255,6 +255,7 @@ const COMMANDS = {
     indent: (e) => adjustIndent(e, 1),
     outdent: (e) => adjustIndent(e, -1),
     insertImage: (e, arg) => e.chain().focus().setImage({ src: arg }).run(),
+    clearFormatting: (e) => e.chain().focus().unsetAllMarks().run(),
     deleteImage: (e) => {
         const { selection } = e.state;
         if (selection.node?.type.name === "image") e.chain().focus().deleteSelection().run();
@@ -391,8 +392,8 @@ export function attach(el, dotNetRef) {
                         } catch {}
                     }
 
-                    const menuWidth = inImage ? 168 : inTable ? 210 : 168;
-                    const menuHeight = inImage ? 52 : inTable ? 430 : 170;
+                    const menuWidth = inImage ? 192 : inTable ? 210 : 168;
+                    const menuHeight = inImage ? 84 : inTable ? 430 : 170;
                     const margin = 8;
                     const x = Math.max(margin, Math.min(event.clientX, window.innerWidth - menuWidth - margin));
                     const y = Math.max(margin, Math.min(event.clientY, window.innerHeight - menuHeight - margin));
