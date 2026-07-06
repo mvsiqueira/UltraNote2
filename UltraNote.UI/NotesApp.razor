@@ -35,6 +35,7 @@
                 <button class="icon-btn" title="Nova nota" @onclick="ToolbarNewNote" disabled="@(_selectedFolderId is null)"><i class="ti ti-file-plus" aria-hidden="true"></i></button>
                 <button class="icon-btn" title="Recolher tudo" @onclick="CollapseAll"><i class="ti ti-chevrons-left" aria-hidden="true"></i></button>
                 <button class="icon-btn" title="Expandir tudo" @onclick="ToolbarExpandAll"><i class="ti ti-chevrons-right" aria-hidden="true"></i></button>
+                <button class="icon-btn" title="Importar do Evernote" @onclick="OpenImport"><i class="ti ti-file-import" aria-hidden="true"></i></button>
                 <button class="icon-btn danger" title="Excluir" @onclick="ToolbarDelete" disabled="@(!CanToolbarDelete)"><i class="ti ti-trash" aria-hidden="true"></i></button>
             </div>
             <div class="sidebar-content">
@@ -189,6 +190,45 @@
         </div>
     }
 
+    @if (_import is not null)
+    {
+        <div class="modal-backdrop">
+            <div class="modal-card">
+                <h2>Importar do Evernote</h2>
+                @if (_import.Importing)
+                {
+                    <p>Importando nota @_import.Done de @_import.Total&hellip;</p>
+                    <div class="import-bar"><div class="import-fill" style="width:@(_import.Total > 0 ? (_import.Done * 100 / _import.Total) : 0)%"></div></div>
+                }
+                else
+                {
+                    <p>Selecione um arquivo <strong>.enex</strong> exportado pelo Evernote e a pasta destino.</p>
+                    <select class="modal-select" @bind="_import.FolderIdStr">
+                        <option value="">— pasta destino —</option>
+                        @foreach (var f in _folders.OrderBy(f => f.Path))
+                        {
+                            <option value="@f.Id">@f.Path</option>
+                        }
+                    </select>
+                    @if (!string.IsNullOrEmpty(_import.Status))
+                    {
+                        <p class="import-status">@_import.Status</p>
+                    }
+                }
+                <div class="modal-actions">
+                    <button class="btn-ghost" @onclick="CloseImport" disabled="@_import.Importing">Cancelar</button>
+                    @if (!_import.Importing)
+                    {
+                        <label class="btn-accent" style="cursor:pointer">
+                            Escolher arquivo
+                            <InputFile style="display:none" OnChange="DoImport" accept=".enex" />
+                        </label>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
     @if (_pendingAction is not null)
     {
         <div class="modal-backdrop">
@@ -232,6 +272,8 @@
     [Parameter] public RenderFragment? TopBarUser { get; set; }
 
     private record CtxMenu(double X, double Y, string Kind, FolderDto? Folder, NoteSummaryDto? Note);
+    private sealed class ImportState { public string FolderIdStr = ""; public bool Importing; public int Total, Done, Failed; public string Status = ""; }
+    private ImportState? _import;
     private record AttachmentCtxMenu(double X, double Y, AttachmentDto Attachment);
     private AttachmentCtxMenu? _attCtx;
 
@@ -871,6 +913,81 @@
         _ when ct.Contains("text/") => "ti-file-text",
         _ => "ti-file",
     };
+
+    // ---------- Evernote import ----------
+
+    private void OpenImport() => _import = new ImportState();
+    private void CloseImport() => _import = null;
+
+    private async Task DoImport(InputFileChangeEventArgs e)
+    {
+        if (_import is null) return;
+        if (!Guid.TryParse(_import.FolderIdStr, out var folderId))
+        {
+            _import.Status = "Selecione uma pasta de destino.";
+            return;
+        }
+
+        _import.Importing = true;
+        _import.Done = 0;
+        _import.Failed = 0;
+        _import.Status = "";
+        StateHasChanged();
+
+        try
+        {
+            List<EnexNote> notes;
+            await using (var stream = e.File.OpenReadStream(maxAllowedSize: 200L * 1024 * 1024))
+                notes = EnexImporter.Parse(stream);
+
+            _import.Total = notes.Count;
+            StateHasChanged();
+
+            foreach (var note in notes)
+            {
+                try
+                {
+                    // Create empty note to obtain the ID
+                    var created = await Api.CreateNoteAsync(new CreateNoteRequest(folderId, note.Title, "<p></p>"));
+
+                    // Upload resources; images become embedded, others become attachments
+                    var hashToUrl = new Dictionary<string, string>();
+                    foreach (var res in note.Resources)
+                    {
+                        try
+                        {
+                            using var ms = new MemoryStream(res.Data);
+                            var dto = await Api.UploadAttachmentAsync(
+                                created.Id, res.FileName, res.Mime, ms,
+                                isEmbedded: res.Mime.StartsWith("image/"));
+                            hashToUrl[res.Hash] = Api.GetAttachmentUrl(dto.Id);
+                        }
+                        catch { }
+                    }
+
+                    // Convert ENML → HTML and persist the final content
+                    var html = EnexImporter.ConvertEnml(note.RawEnml, hashToUrl);
+                    await Api.UpdateNoteAsync(created.Id, new UpdateNoteRequest(note.Title, html, null));
+
+                    _import.Done++;
+                }
+                catch { _import.Failed++; }
+                StateHasChanged();
+            }
+
+            await LoadNotes(folderId);
+            _import.Status = _import.Failed == 0
+                ? $"{_import.Done} nota(s) importada(s) com sucesso."
+                : $"{_import.Done} importada(s), {_import.Failed} falha(s).";
+        }
+        catch (Exception ex)
+        {
+            _import.Status = $"Erro ao ler arquivo: {ex.Message}";
+        }
+
+        _import.Importing = false;
+        StateHasChanged();
+    }
 
     private async Task<string?> Prompt(string message, string? def = null) =>
         await JS.InvokeAsync<string?>("prompt", message, def ?? "");

@@ -505,6 +505,21 @@ body.row-resize-cursor, body.row-resize-cursor * { cursor: row-resize !important
 }
 .modal-select:focus { border-color: var(--accent); outline: none; }
 
+.import-bar {
+  width: 100%; height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 8px 0 4px;
+}
+.import-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+  transition: width .3s ease;
+}
+.import-status { font-size: 12px; color: var(--text-2); margin: 6px 0 0; }
+
 .btn-ghost, .btn-danger {
   border: 1px solid var(--border);
   background: transparent;
