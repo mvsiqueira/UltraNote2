@@ -57,6 +57,11 @@ public static class EnexImporter
         var end = enml.LastIndexOf("</en-note>", StringComparison.OrdinalIgnoreCase);
         var inner = end > tagEnd ? enml[(tagEnd + 1)..end] : enml[(tagEnd + 1)..];
 
+        // Strip Evernote inline styles and classes (incompatible with app styling)
+        inner = Regex.Replace(inner, @"\s+style=""[^""]*""", "", RegexOptions.IgnoreCase);
+        inner = Regex.Replace(inner, @"\s+style='[^']*'", "", RegexOptions.IgnoreCase);
+        inner = Regex.Replace(inner, @"\s+class=""[^""]*""", "", RegexOptions.IgnoreCase);
+
         // <en-media hash="..." type="..."/> → <img> for images, <a> for files
         inner = Regex.Replace(inner, @"<en-media\b([^>]*?)/>",
             m =>

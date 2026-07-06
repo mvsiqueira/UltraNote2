@@ -255,7 +255,12 @@ const COMMANDS = {
     indent: (e) => adjustIndent(e, 1),
     outdent: (e) => adjustIndent(e, -1),
     insertImage: (e, arg) => e.chain().focus().setImage({ src: arg }).run(),
-    clearFormatting: (e) => e.chain().focus().unsetAllMarks().run(),
+    clearFormatting: (e) => {
+        const { from, to } = e.state.selection;
+        const chain = e.chain().focus();
+        if (from === to) chain.selectAll();
+        return chain.unsetAllMarks().run();
+    },
     deleteImage: (e) => {
         const { selection } = e.state;
         if (selection.node?.type.name === "image") e.chain().focus().deleteSelection().run();
