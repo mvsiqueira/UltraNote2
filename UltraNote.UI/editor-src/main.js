@@ -256,10 +256,13 @@ const COMMANDS = {
     outdent: (e) => adjustIndent(e, -1),
     insertImage: (e, arg) => e.chain().focus().setImage({ src: arg }).run(),
     clearFormatting: (e) => {
-        const { from, to } = e.state.selection;
-        const chain = e.chain().focus();
-        if (from === to) chain.selectAll();
-        return chain.unsetAllMarks().run();
+        const { empty, from, to } = e.state.selection;
+        const start = empty ? 0 : from;
+        const end   = empty ? e.state.doc.content.size : to;
+        return e.chain().focus().command(({ tr, state }) => {
+            Object.values(state.schema.marks).forEach(type => tr.removeMark(start, end, type));
+            return true;
+        }).run();
     },
     deleteImage: (e) => {
         const { selection } = e.state;
