@@ -256,9 +256,9 @@ const COMMANDS = {
     outdent: (e) => adjustIndent(e, -1),
     insertImage: (e, arg) => e.chain().focus().setImage({ src: arg }).run(),
     clearFormatting: (e) => {
-        const { empty, from, to } = e.state.selection;
-        const start = empty ? 0 : from;
-        const end   = empty ? e.state.doc.content.size : to;
+        const { from, to } = e.state.selection;
+        const start = from;
+        const end   = to;
         return e.chain().focus().command(({ tr, state }) => {
             const { schema, doc } = state;
             // Remove all inline marks (bold, color, highlight, etc.)
