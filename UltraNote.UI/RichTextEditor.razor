@@ -43,7 +43,7 @@
                     </div>
                     <div class="palette-custom">
                         <input type="color" value="@_fontColor" title="Cor personalizada"
-                               @oninput="(e) => PickFontColor(e.Value?.ToString() ?? _fontColor)" />
+                               @onchange="(e) => PickFontColor(e.Value?.ToString() ?? _fontColor)" />
                         <span>Personalizada</span>
                     </div>
                 </div>
@@ -77,7 +77,7 @@
                     </div>
                     <div class="palette-custom">
                         <input type="color" value="@_highlightColor" title="Cor personalizada"
-                               @oninput="(e) => PickHighlight(e.Value?.ToString() ?? _highlightColor)" />
+                               @onchange="(e) => PickHighlight(e.Value?.ToString() ?? _highlightColor)" />
                         <span>Personalizada</span>
                     </div>
                 </div>
