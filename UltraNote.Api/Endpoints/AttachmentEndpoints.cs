@@ -13,7 +13,7 @@ public static class AttachmentEndpoints
         // Upload an attachment to a note.
         // Pass ?embedded=true when the file will be embedded inline in the editor (e.g. an image).
         api.MapPost("/notes/{noteId:guid}/attachments",
-            async (Guid noteId, IFormFile file, bool embedded, AppDbContext db, IAttachmentStorage storage, CancellationToken ct) =>
+            async (Guid noteId, IFormFile file, bool? embedded, AppDbContext db, IAttachmentStorage storage, CancellationToken ct) =>
             {
                 if (!await db.Notes.AnyAsync(n => n.Id == noteId, ct))
                     return Results.NotFound("Note not found.");
@@ -29,7 +29,7 @@ public static class AttachmentEndpoints
                     FileName = file.FileName,
                     ContentType = file.ContentType ?? "application/octet-stream",
                     StoragePath = path,
-                    IsEmbedded = embedded,
+                    IsEmbedded = embedded ?? false,
                 };
                 db.Attachments.Add(att);
                 await db.SaveChangesAsync(ct);
