@@ -936,9 +936,12 @@
 
         try
         {
-            List<EnexNote> notes;
+            // Copy to MemoryStream first — WASM file streams cannot be read synchronously
+            using var buf = new MemoryStream();
             await using (var stream = e.File.OpenReadStream(maxAllowedSize: 200L * 1024 * 1024))
-                notes = EnexImporter.Parse(stream);
+                await stream.CopyToAsync(buf);
+            buf.Position = 0;
+            var notes = EnexImporter.Parse(buf);
 
             _import.Total = notes.Count;
             StateHasChanged();
