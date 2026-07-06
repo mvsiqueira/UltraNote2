@@ -928,6 +928,20 @@
             return;
         }
 
+        // Read file BEFORE StateHasChanged — re-rendering invalidates the InputFile reference
+        using var buf = new MemoryStream();
+        try
+        {
+            await using var raw = e.File.OpenReadStream(maxAllowedSize: 200L * 1024 * 1024);
+            await raw.CopyToAsync(buf);
+        }
+        catch (Exception ex)
+        {
+            _import.Status = $"Erro ao ler arquivo: {ex.Message}";
+            return;
+        }
+        buf.Position = 0;
+
         _import.Importing = true;
         _import.Done = 0;
         _import.Failed = 0;
@@ -936,11 +950,6 @@
 
         try
         {
-            // Copy to MemoryStream first — WASM file streams cannot be read synchronously
-            using var buf = new MemoryStream();
-            await using (var stream = e.File.OpenReadStream(maxAllowedSize: 200L * 1024 * 1024))
-                await stream.CopyToAsync(buf);
-            buf.Position = 0;
             var notes = EnexImporter.Parse(buf);
 
             _import.Total = notes.Count;
