@@ -71,7 +71,8 @@ public static class AttachmentEndpoints
         {
             var att = await db.Attachments.FindAsync(id);
             if (att is null) return Results.NotFound();
-            att.FileName = req.FileName.Trim();
+            if (req.FileName is not null) att.FileName = req.FileName.Trim();
+            if (req.IsEmbedded.HasValue) att.IsEmbedded = req.IsEmbedded.Value;
             await db.SaveChangesAsync();
             return Results.Ok(ToDto(att));
         });

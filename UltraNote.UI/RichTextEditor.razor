@@ -76,6 +76,7 @@
     <div class="menu" style="left:@($"{_ctxMenu.X}px");top:@($"{_ctxMenu.Y}px")">
         @if (_ctxMenu.InImage)
         {
+            <button @onclick="DetachImage"><i class="ti ti-paperclip" aria-hidden="true"></i>Transformar em anexo</button>
             <button class="danger" @onclick="DeleteImage"><i class="ti ti-photo-x" aria-hidden="true"></i>Excluir imagem</button>
         }
         else
@@ -240,6 +241,19 @@
     }
 
     private void CloseCtxMenu() => _ctxMenu = null;
+
+    private async Task DetachImage()
+    {
+        var src = _ctxMenu?.ImageSrc ?? "";
+        CloseCtxMenu();
+        var parts = src.TrimEnd('/').Split('/');
+        if (parts.Length > 0 && Guid.TryParse(parts[^1], out var id))
+        {
+            try { await Api.SetAttachmentEmbeddedAsync(id, false); } catch { }
+        }
+        await Exec("deleteImage");
+        await OnAttachmentAdded.InvokeAsync();
+    }
 
     private async Task DeleteImage()
     {

@@ -9,4 +9,4 @@ public record AttachmentDto(
     DateTime CreatedAt,
     bool IsEmbedded = false);
 
-public record RenameAttachmentRequest(string FileName);
+public record RenameAttachmentRequest(string? FileName = null, bool? IsEmbedded = null);
