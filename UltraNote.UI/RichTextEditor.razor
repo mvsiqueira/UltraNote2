@@ -178,7 +178,7 @@
         {
             var bytes = Convert.FromBase64String(base64);
             using var stream = new MemoryStream(bytes);
-            var dto = await Api.UploadAttachmentAsync(NoteId.Value, fileName, contentType, stream);
+            var dto = await Api.UploadAttachmentAsync(NoteId.Value, fileName, contentType, stream, isEmbedded: true);
             return Api.GetAttachmentUrl(dto.Id);
         }
         catch (Exception ex)

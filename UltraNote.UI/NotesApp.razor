@@ -786,8 +786,7 @@
         try
         {
             var all = await Api.GetAttachmentsAsync(_selectedNote.Id);
-            _attachments = all.Where(a => !a.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
-                              .ToList();
+            _attachments = all.Where(a => !a.IsEmbedded).ToList();
         }
         catch { _attachments.Clear(); }
     }
@@ -810,8 +809,7 @@
                 }
                 await using var stream = file.OpenReadStream(maxAllowedSize: 100 * 1024 * 1024);
                 var dto = await Api.UploadAttachmentAsync(_selectedNote.Id, file.Name, file.ContentType, stream);
-                if (!dto.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
-                    _attachments.Add(dto);
+                _attachments.Add(dto);
             }
             catch (Exception ex) { _status = $"Erro ao anexar {file.Name}: {ex.Message}"; }
         }
@@ -865,6 +863,7 @@
 
     private static string FileIcon(string ct) => ct switch
     {
+        _ when ct.StartsWith("image/") => "ti-photo",
         _ when ct.Contains("pdf") => "ti-file-type-pdf",
         _ when ct.Contains("word") || ct.Contains("document") => "ti-file-type-doc",
         _ when ct.Contains("sheet") || ct.Contains("excel") || ct.Contains("spreadsheet") => "ti-file-type-xls",

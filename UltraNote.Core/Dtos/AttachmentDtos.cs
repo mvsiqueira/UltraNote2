@@ -6,6 +6,7 @@ public record AttachmentDto(
     string FileName,
     string ContentType,
     string Url,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    bool IsEmbedded = false);
 
 public record RenameAttachmentRequest(string FileName);

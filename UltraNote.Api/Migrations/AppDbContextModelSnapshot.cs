@@ -34,6 +34,9 @@ namespace UltraNote.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsEmbedded")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid>("NoteId")
                         .HasColumnType("TEXT");
 

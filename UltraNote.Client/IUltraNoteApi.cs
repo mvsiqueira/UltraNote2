@@ -21,7 +21,7 @@ public interface IUltraNoteApi
     Task DeleteNoteAsync(Guid id, CancellationToken ct = default);
 
     Task<IReadOnlyList<AttachmentDto>> GetAttachmentsAsync(Guid noteId, CancellationToken ct = default);
-    Task<AttachmentDto> UploadAttachmentAsync(Guid noteId, string fileName, string contentType, Stream content, CancellationToken ct = default);
+    Task<AttachmentDto> UploadAttachmentAsync(Guid noteId, string fileName, string contentType, Stream content, bool isEmbedded = false, CancellationToken ct = default);
     Task<AttachmentDto> RenameAttachmentAsync(Guid id, string fileName, CancellationToken ct = default);
     Task DeleteAttachmentAsync(Guid id, CancellationToken ct = default);
     string GetAttachmentUrl(Guid attachmentId);

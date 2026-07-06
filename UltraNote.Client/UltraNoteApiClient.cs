@@ -67,14 +67,17 @@ public class UltraNoteApiClient(HttpClient http) : IUltraNoteApi
         await http.GetFromJsonAsync<List<AttachmentDto>>($"api/notes/{noteId}/attachments", ct) ?? [];
 
     public async Task<AttachmentDto> UploadAttachmentAsync(
-        Guid noteId, string fileName, string contentType, Stream content, CancellationToken ct = default)
+        Guid noteId, string fileName, string contentType, Stream content, bool isEmbedded = false, CancellationToken ct = default)
     {
         using var form = new MultipartFormDataContent();
         var fileContent = new StreamContent(content);
         fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
         form.Add(fileContent, "file", fileName);
 
-        var res = await http.PostAsync($"api/notes/{noteId}/attachments", form, ct);
+        var url = isEmbedded
+            ? $"api/notes/{noteId}/attachments?embedded=true"
+            : $"api/notes/{noteId}/attachments";
+        var res = await http.PostAsync(url, form, ct);
         res.EnsureSuccessStatusCode();
         return (await res.Content.ReadFromJsonAsync<AttachmentDto>(ct))!;
     }

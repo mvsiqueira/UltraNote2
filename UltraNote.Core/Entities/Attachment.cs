@@ -9,6 +9,7 @@ public class Attachment
 
     public string FileName { get; set; } = string.Empty;
     public string ContentType { get; set; } = "application/octet-stream";
+    public bool IsEmbedded { get; set; } = false;
 
     /// <summary>Relative path under the assets root where the binary is stored.</summary>
     public string StoragePath { get; set; } = string.Empty;
