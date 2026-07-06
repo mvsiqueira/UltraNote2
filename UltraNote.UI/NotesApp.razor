@@ -277,6 +277,9 @@
             _dropZoneJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-dropzone.js");
             _shortcutsRef = DotNetObjectReference.Create(this);
             await _shortcutsJs.InvokeVoidAsync("init", _shortcutsRef);
+            var savedId = await JS.InvokeAsync<string?>("localStorage.getItem", "ultranote_selected_note");
+            if (savedId is not null && Guid.TryParse(savedId, out var restoredNoteId))
+                await SelectNoteNow(restoredNoteId);
             StateHasChanged();
         }
 
@@ -357,13 +360,30 @@
                 _title = _selectedNote.Title;
                 await SetDirty(false);
                 UpdateMeta();
+                await ExpandFolder(_selectedNote.FolderId);
+                await JS.InvokeVoidAsync("localStorage.setItem", "ultranote_selected_note", id.ToString());
                 _status = $"Editando: {_selectedNote.Title}";
             }
-            else { _status = "Nota não encontrada."; }
+            else
+            {
+                await JS.InvokeVoidAsync("localStorage.removeItem", "ultranote_selected_note");
+                _status = "Nota não encontrada.";
+            }
         }
         catch (Exception ex) { _status = $"Erro ao abrir nota: {ex.Message}"; }
         await LoadAttachments();
         StateHasChanged();
+    }
+
+    private async Task ExpandFolder(Guid folderId)
+    {
+        var folder = FolderById(folderId);
+        while (folder is not null)
+        {
+            _expanded.Add(folder.Id);
+            if (!_notes.ContainsKey(folder.Id)) await LoadNotes(folder.Id);
+            folder = folder.ParentId.HasValue ? FolderById(folder.ParentId.Value) : null;
+        }
     }
 
     // ---------- Unsaved-changes guard ----------
@@ -707,6 +727,7 @@
         _meta = "";
         _attachments.Clear();
         await SetDirty(false);
+        await JS.InvokeVoidAsync("localStorage.removeItem", "ultranote_selected_note");
     }
 
     private void UpdateMeta()
