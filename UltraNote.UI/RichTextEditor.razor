@@ -24,14 +24,28 @@
             @if (_activeColorMenu == "font")
             {
                 <div class="color-palette" @onclick:stopPropagation="true">
-                    @foreach (var c in FontColors)
+                    @if (_recentFontColors.Count > 0)
                     {
-                        <button type="button" class="swatch" style="background:@c" title="@c" @onclick="() => PickFontColor(c)"></button>
+                        <span class="palette-label">Recentes</span>
+                        <div class="palette-row">
+                            @foreach (var c in _recentFontColors)
+                            {
+                                <button type="button" class="swatch" style="background:@c" title="@c" @onclick="() => PickFontColor(c)"></button>
+                            }
+                        </div>
                     }
-                    <label class="custom-color">
-                        Outra
-                        <input type="color" value="@_fontColor" @oninput="(e) => PickFontColor(e.Value?.ToString() ?? _fontColor)" />
-                    </label>
+                    <span class="palette-label">Cores</span>
+                    <div class="palette-grid">
+                        @foreach (var c in PaletteColors)
+                        {
+                            <button type="button" class="swatch" style="background:@c" title="@c" @onclick="() => PickFontColor(c)"></button>
+                        }
+                    </div>
+                    <div class="palette-custom">
+                        <input type="color" value="@_fontColor" title="Cor personalizada"
+                               @oninput="(e) => PickFontColor(e.Value?.ToString() ?? _fontColor)" />
+                        <span>Personalizada</span>
+                    </div>
                 </div>
             }
         </div>
@@ -44,14 +58,28 @@
             @if (_activeColorMenu == "highlight")
             {
                 <div class="color-palette" @onclick:stopPropagation="true">
-                    @foreach (var c in HighlightColors)
+                    @if (_recentHighlightColors.Count > 0)
                     {
-                        <button type="button" class="swatch" style="background:@c" title="@c" @onclick="() => PickHighlight(c)"></button>
+                        <span class="palette-label">Recentes</span>
+                        <div class="palette-row">
+                            @foreach (var c in _recentHighlightColors)
+                            {
+                                <button type="button" class="swatch" style="background:@c" title="@c" @onclick="() => PickHighlight(c)"></button>
+                            }
+                        </div>
                     }
-                    <label class="custom-color">
-                        Outra
-                        <input type="color" value="@_highlightColor" @oninput="(e) => PickHighlight(e.Value?.ToString() ?? _highlightColor)" />
-                    </label>
+                    <span class="palette-label">Cores</span>
+                    <div class="palette-grid">
+                        @foreach (var c in PaletteColors)
+                        {
+                            <button type="button" class="swatch" style="background:@c" title="@c" @onclick="() => PickHighlight(c)"></button>
+                        }
+                    </div>
+                    <div class="palette-custom">
+                        <input type="color" value="@_highlightColor" title="Cor personalizada"
+                               @oninput="(e) => PickHighlight(e.Value?.ToString() ?? _highlightColor)" />
+                        <span>Personalizada</span>
+                    </div>
                 </div>
             }
         </div>
@@ -113,8 +141,18 @@
 }
 
 @code {
-    private static readonly string[] FontColors = { "#1f2328", "#c43d2f", "#b56a00", "#2d7d46", "#1f6feb", "#6639ba" };
-    private static readonly string[] HighlightColors = { "#fff2a8", "#ffd8a8", "#c9f2d0", "#cce5ff", "#eadcff", "#f5c2c7" };
+    private static readonly string[] PaletteColors = [
+        "#000000", "#343a40", "#495057", "#868e96", "#ced4da", "#f1f3f5", "#ffffff",
+        "#c92a2a", "#e03131", "#f03e3e", "#ff6b6b", "#ffa8a8", "#ffd8d8", "#fff5f5",
+        "#d9480f", "#e8590c", "#f76707", "#ff922b", "#ffc078", "#ffe8cc", "#fff4e6",
+        "#2b8a3e", "#2f9e44", "#37b24d", "#69db7c", "#b2f2bb", "#d3f9d8", "#ebfbee",
+        "#1864ab", "#1971c2", "#1c7ed6", "#4dabf7", "#a5d8ff", "#dbe4ff", "#e7f5ff",
+        "#5f3dc4", "#6741d9", "#7048e8", "#9775fa", "#d0bfff", "#e5dbff", "#f3f0ff",
+    ];
+
+    private const int MaxRecentColors = 7;
+    private List<string> _recentFontColors = [];
+    private List<string> _recentHighlightColors = [];
 
     private record CtxMenu(double X, double Y, bool InTable, double CellWidth, double RowHeight, bool IsHeaderCell, bool InImage = false, string ImageSrc = "");
 
@@ -224,6 +262,7 @@
     {
         _fontColor = hex;
         _activeColorMenu = null;
+        AddToRecent(_recentFontColors, hex);
         await Exec("color", hex);
     }
 
@@ -231,7 +270,15 @@
     {
         _highlightColor = hex;
         _activeColorMenu = null;
+        AddToRecent(_recentHighlightColors, hex);
         await Exec("highlight", hex);
+    }
+
+    private static void AddToRecent(List<string> list, string hex)
+    {
+        list.Remove(hex);
+        list.Insert(0, hex);
+        if (list.Count > MaxRecentColors) list.RemoveAt(list.Count - 1);
     }
 
     // ---------- Context menu (right-click in the editor) ----------
