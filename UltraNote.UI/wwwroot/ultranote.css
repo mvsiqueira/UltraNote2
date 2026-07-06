@@ -427,6 +427,17 @@ body.row-resize-cursor, body.row-resize-cursor * { cursor: row-resize !important
 }
 .palette-custom span { font-size: 11px; color: var(--muted); }
 
+.ctx-color-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 8px;
+  margin: 2px -8px;
+  background: var(--sidebar);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
 /* ---------- Menus (contexto / novo) ---------- */
 .menu-backdrop { position: fixed; inset: 0; z-index: 90; }
 .menu {

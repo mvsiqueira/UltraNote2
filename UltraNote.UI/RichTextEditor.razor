@@ -114,8 +114,41 @@
             <button @onclick='() => RunCtx("bold")'><i class="ti ti-bold" aria-hidden="true"></i>Negrito</button>
             <button @onclick='() => RunCtx("italic")'><i class="ti ti-italic" aria-hidden="true"></i>Itálico</button>
             <button @onclick='() => RunCtx("strike")'><i class="ti ti-strikethrough" aria-hidden="true"></i>Tachado</button>
-            <button @onclick='() => RunCtx("color", "#c43d2f")'><i class="ti ti-letter-case" aria-hidden="true"></i>Fonte vermelha</button>
-            <button @onclick='() => RunCtx("highlight", "#fff2a8")'><i class="ti ti-highlight" aria-hidden="true"></i>Realce amarelo</button>
+            <button @onclick="OpenCtxFontColor"><i class="ti ti-letter-case" aria-hidden="true"></i>Fonte</button>
+            @if (_ctxColorMode == "font")
+            {
+                <div class="ctx-color-panel">
+                    <div class="palette-grid">
+                        @foreach (var c in PaletteColors)
+                        {
+                            <button type="button" class="swatch" style="background:@c" title="@c" @onclick="() => PickCtxFontColor(c)"></button>
+                        }
+                    </div>
+                    <div class="palette-custom">
+                        <input type="color" value="@_fontColor" title="Cor personalizada"
+                               @onchange="(e) => PickCtxFontColor(e.Value?.ToString() ?? _fontColor)" />
+                        <span>Personalizada</span>
+                    </div>
+                </div>
+            }
+            <button @onclick="OpenCtxHighlight"><i class="ti ti-highlight" aria-hidden="true"></i>Realce</button>
+            @if (_ctxColorMode == "highlight")
+            {
+                <div class="ctx-color-panel">
+                    <div class="palette-grid">
+                        @foreach (var c in PaletteColors)
+                        {
+                            <button type="button" class="swatch" style="background:@c" title="@c" @onclick="() => PickCtxHighlight(c)"></button>
+                        }
+                    </div>
+                    <div class="palette-custom">
+                        <input type="color" value="@_highlightColor" title="Cor personalizada"
+                               @onchange="(e) => PickCtxHighlight(e.Value?.ToString() ?? _highlightColor)" />
+                        <span>Personalizada</span>
+                    </div>
+                </div>
+            }
+            <hr />
             <button @onclick='() => RunCtx("bulletList")'><i class="ti ti-list" aria-hidden="true"></i>Lista</button>
             <button @onclick='() => RunCtx("orderedList")'><i class="ti ti-list-numbers" aria-hidden="true"></i>Lista numerada</button>
 
@@ -136,6 +169,8 @@
                 <button @onclick="() => ResizeCell(0, -12)"><i class="ti ti-arrow-autofit-height" aria-hidden="true"></i>Diminuir altura</button>
                 <button class="danger" @onclick='() => RunCtx("deleteTable")'><i class="ti ti-trash" aria-hidden="true"></i>Excluir tabela</button>
             }
+            <hr />
+            <button @onclick='() => RunCtx("clearFormatting")'><i class="ti ti-clear-formatting" aria-hidden="true"></i>Remover formatação</button>
         }
     </div>
 }
@@ -156,6 +191,7 @@
 
     private record CtxMenu(double X, double Y, bool InTable, double CellWidth, double RowHeight, bool IsHeaderCell, bool InImage = false, string ImageSrc = "");
 
+    private string? _ctxColorMode;
     private ElementReference _surface;
     private IJSObjectReference? _module;
     private DotNetObjectReference<RichTextEditor>? _selfRef;
@@ -289,7 +325,26 @@
         StateHasChanged();
     }
 
-    private void CloseCtxMenu() => _ctxMenu = null;
+    private void CloseCtxMenu() { _ctxMenu = null; _ctxColorMode = null; }
+
+    private void OpenCtxFontColor() => _ctxColorMode = _ctxColorMode == "font" ? null : "font";
+    private void OpenCtxHighlight() => _ctxColorMode = _ctxColorMode == "highlight" ? null : "highlight";
+
+    private async Task PickCtxFontColor(string hex)
+    {
+        _fontColor = hex;
+        AddToRecent(_recentFontColors, hex);
+        CloseCtxMenu();
+        await Exec("color", hex);
+    }
+
+    private async Task PickCtxHighlight(string hex)
+    {
+        _highlightColor = hex;
+        AddToRecent(_recentHighlightColors, hex);
+        CloseCtxMenu();
+        await Exec("highlight", hex);
+    }
 
     private async Task DetachImage()
     {
