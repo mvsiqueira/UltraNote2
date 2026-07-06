@@ -260,7 +260,16 @@ const COMMANDS = {
         const start = empty ? 0 : from;
         const end   = empty ? e.state.doc.content.size : to;
         return e.chain().focus().command(({ tr, state }) => {
-            Object.values(state.schema.marks).forEach(type => tr.removeMark(start, end, type));
+            const { schema, doc } = state;
+            // Remove all inline marks (bold, color, highlight, etc.)
+            Object.values(schema.marks).forEach(type => tr.removeMark(start, end, type));
+            // Convert block nodes that aren't plain paragraphs back to paragraphs
+            const para = schema.nodes.paragraph;
+            const skip = new Set(['paragraph','bulletList','orderedList','listItem','tableRow','tableCell','tableHeader','table']);
+            doc.nodesBetween(start, end, (node, pos) => {
+                if (node.isBlock && !node.isLeaf && !skip.has(node.type.name))
+                    tr.setNodeMarkup(pos, para);
+            });
             return true;
         }).run();
     },
