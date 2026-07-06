@@ -103,7 +103,7 @@
                         <div class="attachments-list">
                             @foreach (var att in _attachments)
                             {
-                                <div class="attachment-item" @ondblclick="() => OpenAttachment(att)">
+                                <div class="attachment-item" @ondblclick="() => OpenAttachment(att)" @oncontextmenu:preventDefault="true" @oncontextmenu="(e) => OpenAttachmentMenu(att, e)">
                                     <i class="ti @FileIcon(att.ContentType)" aria-hidden="true"></i>
                                     <span class="att-name" title="@att.FileName">@att.FileName</span>
                                     <a class="icon-btn" href="@Api.GetAttachmentUrl(att.Id)" download="@att.FileName" title="Baixar"><i class="ti ti-download" aria-hidden="true"></i></a>
@@ -180,6 +180,15 @@
         </div>
     }
 
+    @if (_attCtx is not null)
+    {
+        <div class="menu-backdrop" @onclick="CloseAttachmentMenu" @oncontextmenu:preventDefault="true" @oncontextmenu="CloseAttachmentMenu"></div>
+        <div class="menu" style="left:@($"{_attCtx.X}px");top:@($"{_attCtx.Y}px")">
+            <button @onclick="RenameAttachment"><i class="ti ti-pencil" aria-hidden="true"></i>Renomear</button>
+            <button class="danger" @onclick="DeleteAttachmentFromCtx"><i class="ti ti-trash" aria-hidden="true"></i>Excluir</button>
+        </div>
+    }
+
     @if (_pendingAction is not null)
     {
         <div class="modal-backdrop">
@@ -223,6 +232,8 @@
     [Parameter] public RenderFragment? TopBarUser { get; set; }
 
     private record CtxMenu(double X, double Y, string Kind, FolderDto? Folder, NoteSummaryDto? Note);
+    private record AttachmentCtxMenu(double X, double Y, AttachmentDto Attachment);
+    private AttachmentCtxMenu? _attCtx;
 
     private List<FolderDto> _folders = new();
     private ILookup<Guid?, FolderDto> _byParent = Enumerable.Empty<FolderDto>().ToLookup(f => (Guid?)null);
@@ -809,6 +820,36 @@
 
     private async Task OpenAttachment(AttachmentDto att) =>
         await JS.InvokeVoidAsync("open", Api.GetAttachmentUrl(att.Id), "_blank");
+
+    private void OpenAttachmentMenu(AttachmentDto att, MouseEventArgs e) =>
+        _attCtx = new AttachmentCtxMenu(e.ClientX, e.ClientY, att);
+
+    private void CloseAttachmentMenu() => _attCtx = null;
+
+    private async Task RenameAttachment()
+    {
+        if (_attCtx is null) return;
+        var att = _attCtx.Attachment;
+        CloseAttachmentMenu();
+        var newName = await Prompt("Novo nome do arquivo:", att.FileName);
+        if (string.IsNullOrWhiteSpace(newName) || newName == att.FileName) return;
+        try
+        {
+            var updated = await Api.RenameAttachmentAsync(att.Id, newName);
+            var idx = _attachments.IndexOf(att);
+            if (idx >= 0) _attachments[idx] = updated;
+            StateHasChanged();
+        }
+        catch (Exception ex) { _status = $"Erro ao renomear anexo: {ex.Message}"; }
+    }
+
+    private async Task DeleteAttachmentFromCtx()
+    {
+        if (_attCtx is null) return;
+        var att = _attCtx.Attachment;
+        CloseAttachmentMenu();
+        await DeleteAttachment(att);
+    }
 
     private async Task DeleteAttachment(AttachmentDto att)
     {

@@ -7,3 +7,5 @@ public record AttachmentDto(
     string ContentType,
     string Url,
     DateTime CreatedAt);
+
+public record RenameAttachmentRequest(string FileName);

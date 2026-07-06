@@ -63,6 +63,15 @@ public static class AttachmentEndpoints
                 : Results.File(stream, att.ContentType);
         });
 
+        g.MapPatch("/{id:guid}", async (Guid id, RenameAttachmentRequest req, AppDbContext db) =>
+        {
+            var att = await db.Attachments.FindAsync(id);
+            if (att is null) return Results.NotFound();
+            att.FileName = req.FileName.Trim();
+            await db.SaveChangesAsync();
+            return Results.Ok(ToDto(att));
+        });
+
         g.MapDelete("/{id:guid}", async (Guid id, AppDbContext db, IAttachmentStorage storage) =>
         {
             var att = await db.Attachments.FindAsync(id);

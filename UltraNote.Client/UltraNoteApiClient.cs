@@ -79,6 +79,13 @@ public class UltraNoteApiClient(HttpClient http) : IUltraNoteApi
         return (await res.Content.ReadFromJsonAsync<AttachmentDto>(ct))!;
     }
 
+    public async Task<AttachmentDto> RenameAttachmentAsync(Guid id, string fileName, CancellationToken ct = default)
+    {
+        var res = await http.PatchAsJsonAsync($"api/attachments/{id}", new RenameAttachmentRequest(fileName), ct);
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<AttachmentDto>(ct))!;
+    }
+
     public async Task DeleteAttachmentAsync(Guid id, CancellationToken ct = default) =>
         (await http.DeleteAsync($"api/attachments/{id}", ct)).EnsureSuccessStatusCode();
 
