@@ -54,14 +54,16 @@ public static class AttachmentEndpoints
 
         var g = api.MapGroup("/attachments").WithTags("Attachments");
 
-        // Download the binary.
-        g.MapGet("/{id:guid}", async (Guid id, AppDbContext db, IAttachmentStorage storage) =>
+        // Serve the binary. Without ?download=true: inline (for double-click preview).
+        // With ?download=true: attachment disposition (forces browser download).
+        g.MapGet("/{id:guid}", async (Guid id, bool? download, AppDbContext db, IAttachmentStorage storage) =>
         {
             var att = await db.Attachments.FindAsync(id);
             if (att is null) return Results.NotFound();
             var stream = storage.OpenRead(att.StoragePath);
-            return stream is null
-                ? Results.NotFound("File missing on disk.")
+            if (stream is null) return Results.NotFound("File missing on disk.");
+            return download == true
+                ? Results.File(stream, att.ContentType, att.FileName)
                 : Results.File(stream, att.ContentType);
         });
 

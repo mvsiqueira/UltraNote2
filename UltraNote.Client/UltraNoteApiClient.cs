@@ -97,4 +97,10 @@ public class UltraNoteApiClient(HttpClient http) : IUltraNoteApi
         var baseUri = http.BaseAddress is null ? "" : http.BaseAddress.ToString().TrimEnd('/');
         return $"{baseUri}/api/attachments/{attachmentId}";
     }
+
+    public string GetAttachmentDownloadUrl(Guid attachmentId)
+    {
+        var baseUri = http.BaseAddress is null ? "" : http.BaseAddress.ToString().TrimEnd('/');
+        return $"{baseUri}/api/attachments/{attachmentId}?download=true";
+    }
 }

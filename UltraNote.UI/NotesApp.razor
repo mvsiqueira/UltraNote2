@@ -106,7 +106,7 @@
                                 <div class="attachment-item" @ondblclick="() => OpenAttachment(att)" @oncontextmenu:preventDefault="true" @oncontextmenu="(e) => OpenAttachmentMenu(att, e)">
                                     <i class="ti @FileIcon(att.ContentType)" aria-hidden="true"></i>
                                     <span class="att-name" title="@att.FileName">@att.FileName</span>
-                                    <a class="icon-btn" href="@Api.GetAttachmentUrl(att.Id)" download="@att.FileName" title="Baixar"><i class="ti ti-download" aria-hidden="true"></i></a>
+                                    <a class="icon-btn" href="@Api.GetAttachmentDownloadUrl(att.Id)" target="_blank" title="Baixar"><i class="ti ti-download" aria-hidden="true"></i></a>
                                     <button class="icon-btn danger" title="Excluir anexo" @onclick="() => DeleteAttachment(att)"><i class="ti ti-trash" aria-hidden="true"></i></button>
                                 </div>
                             }
