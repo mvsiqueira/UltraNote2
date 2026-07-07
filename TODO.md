@@ -22,9 +22,9 @@ Backlog de evolução. Marque `[x]` ao concluir. Prioridade sugerida de cima par
   - [x] Menu de contexto (botão direito): formatação sempre; operações de tabela só dentro de uma tabela.
 - [x] **Colar/dropar/toolbar imagem** no editor → upload via API → embutida no HTML com suporte a redimensionamento e menu de contexto (excluir imagem).
 - [ ] **Anexos no corpo da nota** — inserir arquivos não-imagem como um "file node" inline no TipTap: bloco com ícone + nome + link de download embutido no HTML da nota (hoje os anexos ficam em painel separado abaixo do editor).
-- [ ] **Remover formatação** — botão na toolbar que limpa todas as marcas (negrito, cor, realce, etc.) do texto selecionado.
-- [ ] **Melhorar menu de contexto** — revisar itens, agrupar melhor, adicionar ícones mais claros.
-- [ ] **Melhorar color picker** — paleta mais rica, preview em tempo real, histórico de cores usadas.
+- [x] **Remover formatação** — botão na toolbar que limpa todas as marcas (negrito, cor, realce, etc.) do texto selecionado.
+- [x] **Melhorar menu de contexto** — revisar itens, agrupar melhor, adicionar ícones mais claros.
+- [x] **Melhorar color picker** — paleta mais rica, preview em tempo real, histórico de cores usadas.
 
 ## 2. Gestão de notas e pastas (API já suporta; falta UI)
 
@@ -32,8 +32,9 @@ Backlog de evolução. Marque `[x]` ao concluir. Prioridade sugerida de cima par
 - [x] **Renomear pasta** — menu de contexto.
 - [x] **Buscar** notas (por título) — caixa de busca na barra superior.
 - [x] **Mover** nota/pasta — menu de contexto "Mover...", modal com seletor de destino (pastas descendentes excluídas para evitar ciclo).
-- [ ] **Salvar estado** (pastas abertas e fechadas e nota selecionada)
-- [ ] **Importar do Evernote** — importar arquivo `.enex` (formato de exportação do Evernote): criar pastas/notas preservando estrutura e conteúdo HTML.
+- [x] **Salvar estado** (pastas abertas e fechadas e nota selecionada)
+- [x] **Importar do Evernote** — importar arquivo `.enex` (formato de exportação do Evernote): criar pastas/notas preservando estrutura e conteúdo HTML.
+- [ ] Notas favoritas
 
 ## 3. UX e robustez
 
@@ -43,7 +44,7 @@ Backlog de evolução. Marque `[x]` ao concluir. Prioridade sugerida de cima par
 - [x] Atalho de teclado **Ctrl+S** (ou Cmd+S) salva a nota aberta, sem disparar o "Salvar página" do navegador.
 - [ ] **Adaptar para mobile** — layout responsivo: sidebar recolhível, toolbar do editor adaptada para toque, área de edição ocupa tela cheia.
 - [x] **Barra de ferramentas acima da árvore** — ações rápidas (nova pasta, nova nota, recolher tudo, expandir tudo) + nó raiz "Notas" para criação de pastas na raiz.
-- [ ] **Tela de About** — versão do app, créditos, links (GitHub, etc.).
+- [x] **Tela de About** — versão do app, créditos, links (GitHub, etc.).
 
 ## 3b. Multiusuário (segregação de dados)
 
@@ -71,8 +72,8 @@ Backlog de evolução. Marque `[x]` ao concluir. Prioridade sugerida de cima par
 
 ## 6. Visual / Identidade
 
-- [ ] **Alterar logo** — criar/escolher logotipo para o UltraNote (exibido na tela de login, about e splash de loading).
-- [ ] **Alterar favicon** — substituir o favicon padrão do Blazor pelo ícone do UltraNote.
+- [x] **Alterar logo** — ícone SVG inline no brand do topbar (papel com dobra + sparkle dourado Ultrasoft); tema escuro/claro via CSS.
+- [x] **Alterar favicon** — favicon SVG + PNG (32×32, 192×192, 512×512) com ícone do UltraNote.
 
 ## 7. Infra / Deploy / Qualidade
 

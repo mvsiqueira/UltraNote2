@@ -19,7 +19,7 @@
         <div class="color-swatch">
             <button type="button" class="color-swatch-btn" title="Cor da fonte"
                     @onclick:stopPropagation="true" @onclick='() => ToggleColorMenu("font")'>
-                <span class="font-indicator" style="color:@_fontColor">A</span>
+                <span class="font-indicator" style="@(_fontColor != null ? $"color:{_fontColor}" : "")">A</span>
             </button>
             @if (_activeColorMenu == "font")
             {
@@ -42,8 +42,8 @@
                         }
                     </div>
                     <div class="palette-custom">
-                        <input type="color" value="@_fontColor" title="Cor personalizada"
-                               @onchange="(e) => PickFontColor(e.Value?.ToString() ?? _fontColor)" />
+                        <input type="color" value="@(_fontColor ?? "#000000")" title="Cor personalizada"
+                               @onchange='(e) => PickFontColor(e.Value?.ToString() ?? _fontColor ?? "#000000")' />
                         <span>Personalizada</span>
                     </div>
                 </div>
@@ -125,8 +125,8 @@
                         }
                     </div>
                     <div class="palette-custom">
-                        <input type="color" value="@_fontColor" title="Cor personalizada"
-                               @onchange="(e) => PickCtxFontColor(e.Value?.ToString() ?? _fontColor)" />
+                        <input type="color" value="@(_fontColor ?? "#000000")" title="Cor personalizada"
+                               @onchange='(e) => PickCtxFontColor(e.Value?.ToString() ?? _fontColor ?? "#000000")' />
                         <span>Personalizada</span>
                     </div>
                 </div>
@@ -198,7 +198,7 @@
     private string? _lastApplied;
 
     private string? _activeColorMenu;
-    private string _fontColor = "#1f2328";
+    private string? _fontColor;
     private string _highlightColor = "#fff2a8";
     private CtxMenu? _ctxMenu;
 

@@ -4,7 +4,20 @@
 
 <div class="app">
     <header class="topbar">
-        <span class="brand"><i class="ti ti-notebook" aria-hidden="true"></i>UltraNote</span>
+        <span class="brand">
+            <svg class="brand-logo" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <rect class="bl-bg"   width="200" height="200" rx="38"/>
+                <path class="bl-page" d="M50,36 L124,36 L150,62 L150,168 L50,168 Z"/>
+                <path class="bl-fold" d="M124,36 L150,62 L124,62 Z"/>
+                <rect class="bl-line" x="66" y="84"  width="60" height="7" rx="3.5"/>
+                <rect class="bl-line" x="66" y="100" width="68" height="7" rx="3.5"/>
+                <rect class="bl-line" x="66" y="116" width="52" height="7" rx="3.5"/>
+                <rect class="bl-line" x="66" y="132" width="64" height="7" rx="3.5"/>
+                <rect class="bl-line" x="66" y="148" width="44" height="7" rx="3.5"/>
+                <path fill="#C89B3C" d="M150,100 C154,127 173,146 200,150 C173,154 154,173 150,200 C146,173 127,154 100,150 C127,146 146,127 150,100Z"/>
+            </svg>
+            UltraNote
+        </span>
 
         <nav class="breadcrumb">
             @if (_selectedNote is not null)

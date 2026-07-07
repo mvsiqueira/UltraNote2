@@ -66,6 +66,17 @@ html, body {
 
 .brand { display: flex; align-items: center; gap: 7px; font-weight: 600; font-size: 14px; }
 .brand .ti { color: var(--accent); font-size: 18px; }
+.brand-logo { width: 22px; height: 22px; flex-shrink: 0; }
+/* dark theme (default) */
+.bl-bg   { fill: #0F2535; }
+.bl-page { fill: #F1F3F5; }
+.bl-fold { fill: #CED4DA; }
+.bl-line { fill: #ADB5BD; }
+/* light theme: sem fundo, papel escuro com linhas claras */
+[data-theme="light"] .bl-bg   { display: none; }
+[data-theme="light"] .bl-page { fill: #0F2535; }
+[data-theme="light"] .bl-fold { fill: #1B3A52; }
+[data-theme="light"] .bl-line { fill: #F1F3F5; }
 
 .breadcrumb {
   display: flex;

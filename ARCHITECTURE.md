@@ -6,7 +6,7 @@ em árvore de pastas). O objetivo do porte é centralizar os dados num container
 Docker no file server **QNAP**, de modo que tanto um app **Windows** quanto uma
 futura versão **web** acessem as mesmas notas de qualquer lugar.
 
-> Status: documento de arquitetura aprovado em 2026-06-28. Ainda não implementado.
+> Status: implementado e em produção no QNAP desde 2026-07. `UltraNote.Desktop` (MAUI) ainda pendente.
 
 ---
 
