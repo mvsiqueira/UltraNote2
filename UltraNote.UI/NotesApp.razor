@@ -315,8 +315,7 @@
     {
         get
         {
-            var v = typeof(NotesApp).Assembly.GetName().Version;
-            return v is not null ? $"v{v.Major}.{v.Minor}.{v.Build}" : "v2.0";
+            return "v2.0.0";
         }
     }
 
