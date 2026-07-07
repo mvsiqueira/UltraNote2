@@ -24,6 +24,7 @@
                 <input placeholder="Buscar notas…" value="@_query" @oninput="OnSearchInput" />
             </div>
             <button class="icon-btn" title="Tema" @onclick="ToggleTheme"><i class="ti @(_theme == "dark" ? "ti-sun" : "ti-moon")" aria-hidden="true"></i></button>
+            <button class="icon-btn" title="Sobre" @onclick="() => _showAbout = true"><i class="ti ti-info-circle" aria-hidden="true"></i></button>
             @TopBarUser
         </div>
     </header>
@@ -229,6 +230,43 @@
         </div>
     }
 
+    @if (_showAbout)
+    {
+        <div class="modal-backdrop" @onclick="() => _showAbout = false">
+            <div class="modal-card about-card" @onclick:stopPropagation="true">
+                <div class="about-logo">
+                    <svg width="72" height="72" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="50" cy="50" r="50" fill="#0F2535" />
+                        <path fill="#C89B3C" d="M50,22 C52.5,37 63,48 78,50 C63,52 52.5,63 50,78 C47.5,63 37,52 22,50 C37,48 47.5,37 50,22Z" />
+                    </svg>
+                    <span class="about-brand">U L T R A S O F T</span>
+                </div>
+
+                <h2 class="about-appname">UltraNote</h2>
+                <p class="about-version">@AppVersion</p>
+                <p class="about-stack">C# &middot; .NET 10 &middot; Blazor WASM &middot; ASP.NET Core</p>
+
+                <hr class="about-sep" />
+
+                <p class="about-devby">Desenvolvido por</p>
+                <p class="about-dev"><strong>Marcus Siqueira</strong></p>
+                <p class="about-dev">ChatGPT <em>&ldquo;Raj&rdquo;</em> Codex</p>
+                <p class="about-dev">Claude <em>&ldquo;Claudinho&rdquo;</em> Code</p>
+
+                <hr class="about-sep" />
+
+                <a class="about-link" href="https://github.com/mvsiqueira/UltraNote2" target="_blank" rel="noopener">
+                    github.com/mvsiqueira/UltraNote2
+                </a>
+                <p class="about-copy">&copy; 2025&ndash;2026 Ultrasoft</p>
+
+                <div class="modal-actions">
+                    <button class="btn-ghost" @onclick="() => _showAbout = false">Fechar</button>
+                </div>
+            </div>
+        </div>
+    }
+
     @if (_pendingAction is not null)
     {
         <div class="modal-backdrop">
@@ -272,6 +310,16 @@
     [Parameter] public RenderFragment? TopBarUser { get; set; }
 
     private record CtxMenu(double X, double Y, string Kind, FolderDto? Folder, NoteSummaryDto? Note);
+    private bool _showAbout;
+    private static string AppVersion
+    {
+        get
+        {
+            var v = typeof(NotesApp).Assembly.GetName().Version;
+            return v is not null ? $"v{v.Major}.{v.Minor}.{v.Build}" : "v2.0";
+        }
+    }
+
     private sealed class ImportState { public string FolderIdStr = ""; public bool Importing; public int Total, Done, Failed; public string Status = ""; }
     private ImportState? _import;
     private record AttachmentCtxMenu(double X, double Y, AttachmentDto Attachment);
