@@ -289,6 +289,15 @@
                     {
                         <p class="import-status">@_import.Status</p>
                     }
+                    @if (_import.Errors.Count > 0)
+                    {
+                        <ul class="import-errors">
+                            @foreach (var err in _import.Errors)
+                            {
+                                <li>@err</li>
+                            }
+                        </ul>
+                    }
                 }
                 <div class="modal-actions">
                     <button class="btn-ghost" @onclick="CloseImport" disabled="@_import.Importing">Cancelar</button>
@@ -393,7 +402,7 @@
         }
     }
 
-    private sealed class ImportState { public string FolderIdStr = ""; public bool Importing; public int Total, Done, Failed; public string Status = ""; }
+    private sealed class ImportState { public string FolderIdStr = ""; public bool Importing; public int Total, Done, Failed; public string Status = ""; public List<string> Errors = new(); }
     private ImportState? _import;
     private record AttachmentCtxMenu(double X, double Y, AttachmentDto Attachment);
     private AttachmentCtxMenu? _attCtx;
@@ -1163,9 +1172,14 @@
                             var dto = await Api.UploadAttachmentAsync(
                                 created.Id, res.FileName, res.Mime, ms,
                                 isEmbedded: res.Mime.StartsWith("image/"));
+                            if (dto.Id == Guid.Empty)
+                                throw new InvalidOperationException("resposta da API sem ID de anexo válido");
                             hashToUrl[res.Hash] = Api.GetAttachmentUrl(dto.Id);
                         }
-                        catch { }
+                        catch (Exception ex)
+                        {
+                            _import.Errors.Add($"{note.Title} — anexo \"{res.FileName}\": {ex.Message}");
+                        }
                     }
 
                     // Convert ENML → HTML and persist the final content
@@ -1174,7 +1188,11 @@
 
                     _import.Done++;
                 }
-                catch { _import.Failed++; }
+                catch (Exception ex)
+                {
+                    _import.Failed++;
+                    _import.Errors.Add($"{note.Title}: {ex.Message}");
+                }
                 StateHasChanged();
             }
 

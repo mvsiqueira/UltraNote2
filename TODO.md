@@ -34,6 +34,7 @@ Backlog de evolução. Marque `[x]` ao concluir. Prioridade sugerida de cima par
 - [x] **Mover** nota/pasta — menu de contexto "Mover...", modal com seletor de destino (pastas descendentes excluídas para evitar ciclo).
 - [x] **Salvar estado** (pastas abertas e fechadas e nota selecionada)
 - [x] **Importar do Evernote** — importar arquivo `.enex` (formato de exportação do Evernote): criar pastas/notas preservando estrutura e conteúdo HTML.
+  - [x] Erros de upload de anexo durante a importação (rede, resposta inválida da API) agora aparecem na tela em vez de falhar silenciosamente — antes um anexo que falhasse virava um link quebrado sem nenhum aviso.
 - [x] **Notas favoritas** — seção "Favoritos" na barra lateral (mostrar/ocultar via toolbar, estado persistido em localStorage), toggle por estrela no cabeçalho do editor e no menu de contexto, indicador na árvore.
 
 ## 3. UX e robustez

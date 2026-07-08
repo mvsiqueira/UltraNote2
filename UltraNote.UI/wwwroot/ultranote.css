@@ -559,6 +559,20 @@ body.row-resize-cursor, body.row-resize-cursor * { cursor: row-resize !important
   transition: width .3s ease;
 }
 .import-status { font-size: 12px; color: var(--text-2); margin: 6px 0 0; }
+.import-errors {
+  max-height: 160px;
+  overflow-y: auto;
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--danger, #e53e3e);
+  list-style: none;
+}
+.import-errors li { margin: 0 0 4px; }
+.import-errors li:last-child { margin-bottom: 0; }
 
 /* ---------- About modal ---------- */
 .about-card { width: 360px; text-align: center; }
