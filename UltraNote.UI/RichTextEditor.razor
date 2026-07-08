@@ -93,6 +93,7 @@
         <button type="button" title="Link" @onclick="InsertLink"><i class="ti ti-link" aria-hidden="true"></i></button>
         <button type="button" title="Tabela" @onclick='() => Exec("insertTable")'><i class="ti ti-table" aria-hidden="true"></i></button>
         <button type="button" title="Inserir imagem" @onclick="InsertImageFromFile" disabled="@(NoteId is null)"><i class="ti ti-photo" aria-hidden="true"></i></button>
+        <button type="button" title="Linha horizontal" @onclick='() => Exec("horizontalRule")'><i class="ti ti-separator" aria-hidden="true"></i></button>
         <span class="rte-sep"></span>
         <button type="button" title="Remover formatação" @onclick='() => Exec("clearFormatting")'><i class="ti ti-clear-formatting" aria-hidden="true"></i></button>
     </div>

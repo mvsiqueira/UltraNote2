@@ -255,6 +255,7 @@ const COMMANDS = {
     indent: (e) => adjustIndent(e, 1),
     outdent: (e) => adjustIndent(e, -1),
     insertImage: (e, arg) => e.chain().focus().setImage({ src: arg }).run(),
+    horizontalRule: (e) => e.chain().focus().setHorizontalRule().run(),
     clearFormatting: (e) => {
         const { from, to } = e.state.selection;
         const start = from;
