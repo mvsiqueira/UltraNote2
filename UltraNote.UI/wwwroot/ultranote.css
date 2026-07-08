@@ -203,6 +203,8 @@ html, body {
 /* ---------- Favoritos ---------- */
 .fav-root-row { font-weight: 500; }
 .fav-ico { color: #C89B3C; font-size: 16px; flex-shrink: 0; }
+.star-btn { color: var(--muted); font-size: 18px; flex-shrink: 0; transition: color .15s; }
+.star-btn:hover, .star-btn.star-active { color: #C89B3C; }
 .fav-badge { margin-left: auto; font-size: 10px; background: var(--hover); border-radius: 8px; padding: 1px 6px; color: var(--muted); }
 .fav-empty { padding-left: 38px; font-size: 12px; }
 .fav-note { padding-left: 38px !important; }

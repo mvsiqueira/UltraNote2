@@ -123,6 +123,11 @@
             {
                 <div class="editor-head">
                     <input class="title-input" @bind="_title" @bind:event="oninput" />
+                    <button class="icon-btn star-btn @(_selectedNote.IsFavorite ? "star-active" : "")"
+                            title="@(_selectedNote.IsFavorite ? "Desfavoritar" : "Favoritar")"
+                            @onclick="ToggleFavoriteCurrentNote">
+                        <i class="ti @(_selectedNote.IsFavorite ? "ti-star-filled" : "ti-star")" aria-hidden="true"></i>
+                    </button>
                     <button class="btn-accent" @onclick="SaveNote" disabled="@_saving">@(_saving ? "Salvando…" : _dirty ? "Salvar *" : "Salvar")</button>
                 </div>
                 <div class="editor-meta">@_meta</div>
@@ -517,10 +522,28 @@
             // Atualiza resultados de busca
             var sri = _searchResults.FindIndex(n => n.Id == note.Id);
             if (sri >= 0) _searchResults[sri] = _searchResults[sri] with { IsFavorite = newVal };
+            // Atualiza nota aberta se for a mesma
+            if (_selectedNote?.Id == note.Id)
+                _selectedNote = _selectedNote with { IsFavorite = newVal };
             await LoadFavorites();
             StateHasChanged();
         }
         catch (Exception ex) { _status = $"Erro: {ex.Message}"; }
+    }
+
+    private Task ToggleFavoriteCurrentNote()
+    {
+        if (_selectedNote is null) return Task.CompletedTask;
+        // Busca summary no cache para reutilizar ToggleFavorite
+        if (_notes.TryGetValue(_selectedNote.FolderId, out var list))
+        {
+            var s = list.FirstOrDefault(n => n.Id == _selectedNote.Id);
+            if (s is not null) return ToggleFavorite(s);
+        }
+        // Fallback: constrói summary a partir da nota aberta
+        return ToggleFavorite(new NoteSummaryDto(
+            _selectedNote.Id, _selectedNote.FolderId, _selectedNote.Title,
+            _selectedNote.UpdatedAt, _selectedNote.IsFavorite));
     }
 
     // ---------- Selection ----------
