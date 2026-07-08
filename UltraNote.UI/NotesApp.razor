@@ -513,7 +513,9 @@
         await SetDirty(false);
         _selectedFolderId = folder.Id;
         _treeSelectionIsNote = false;
-        if (_expanded.Add(folder.Id) && !_notes.ContainsKey(folder.Id))
+        if (!_expanded.Add(folder.Id))
+            _expanded.Remove(folder.Id);
+        else if (!_notes.ContainsKey(folder.Id))
             await LoadNotes(folder.Id);
         StateHasChanged();
     }
