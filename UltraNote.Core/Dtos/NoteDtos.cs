@@ -5,7 +5,8 @@ public record NoteSummaryDto(
     Guid Id,
     Guid FolderId,
     string Title,
-    DateTime UpdatedAt);
+    DateTime UpdatedAt,
+    bool IsFavorite = false);
 
 /// <summary>Full note including the HTML body.</summary>
 public record NoteDto(
@@ -14,8 +15,9 @@ public record NoteDto(
     string Title,
     string ContentHtml,
     DateTime CreatedAt,
-    DateTime UpdatedAt);
+    DateTime UpdatedAt,
+    bool IsFavorite = false);
 
 public record CreateNoteRequest(Guid FolderId, string Title, string? ContentHtml);
 
-public record UpdateNoteRequest(string? Title, string? ContentHtml, Guid? FolderId);
+public record UpdateNoteRequest(string? Title, string? ContentHtml, Guid? FolderId, bool? IsFavorite = null);

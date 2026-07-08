@@ -21,6 +21,9 @@ public class UltraNoteApiClient(HttpClient http) : IUltraNoteApi
     public async Task<IReadOnlyList<NoteSummaryDto>> GetNotesAsync(Guid folderId, CancellationToken ct = default) =>
         await http.GetFromJsonAsync<List<NoteSummaryDto>>($"api/folders/{folderId}/notes", ct) ?? [];
 
+    public async Task<IReadOnlyList<NoteSummaryDto>> GetFavoritesAsync(CancellationToken ct = default) =>
+        await http.GetFromJsonAsync<List<NoteSummaryDto>>("api/notes/favorites", ct) ?? [];
+
     public async Task<FolderDto> CreateFolderAsync(CreateFolderRequest req, CancellationToken ct = default)
     {
         var res = await http.PostAsJsonAsync("api/folders", req, ct);

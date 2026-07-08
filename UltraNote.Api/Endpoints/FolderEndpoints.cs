@@ -34,7 +34,7 @@ public static class FolderEndpoints
             var notes = await db.Notes
                 .Where(n => n.FolderId == id)
                 .OrderBy(n => n.Title)
-                .Select(n => new NoteSummaryDto(n.Id, n.FolderId, n.Title, n.UpdatedAt))
+                .Select(n => new NoteSummaryDto(n.Id, n.FolderId, n.Title, n.UpdatedAt, n.IsFavorite))
                 .ToListAsync();
             return Results.Ok(notes);
         });

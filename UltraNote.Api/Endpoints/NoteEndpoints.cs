@@ -11,6 +11,16 @@ public static class NoteEndpoints
     {
         var g = api.MapGroup("/notes").WithTags("Notes");
 
+        g.MapGet("/favorites", async (AppDbContext db) =>
+        {
+            var notes = await db.Notes
+                .Where(n => n.IsFavorite)
+                .OrderBy(n => n.Title)
+                .Select(n => new NoteSummaryDto(n.Id, n.FolderId, n.Title, n.UpdatedAt, n.IsFavorite))
+                .ToListAsync();
+            return Results.Ok(notes);
+        });
+
         g.MapGet("/{id:guid}", async (Guid id, AppDbContext db) =>
         {
             var n = await db.Notes.FindAsync(id);
@@ -50,6 +60,8 @@ public static class NoteEndpoints
                 note.Title = req.Title.Trim();
             if (req.ContentHtml is not null)
                 note.ContentHtml = req.ContentHtml;
+            if (req.IsFavorite is { } fav)
+                note.IsFavorite = fav;
 
             note.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
@@ -69,5 +81,5 @@ public static class NoteEndpoints
     }
 
     private static NoteDto ToDto(Note n) =>
-        new(n.Id, n.FolderId, n.Title, n.ContentHtml, n.CreatedAt, n.UpdatedAt);
+        new(n.Id, n.FolderId, n.Title, n.ContentHtml, n.CreatedAt, n.UpdatedAt, n.IsFavorite);
 }

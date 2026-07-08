@@ -30,6 +30,7 @@
                  @oncontextmenu="(e) => Owner.OpenNoteMenu(note, e)">
                 <i class="ti ti-file-text note-ico" aria-hidden="true"></i>
                 <span class="tree-label">@note.Title</span>
+                @if (note.IsFavorite) { <i class="ti ti-star-filled note-fav-star" aria-hidden="true"></i> }
             </div>
         }
     }

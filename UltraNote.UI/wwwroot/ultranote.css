@@ -200,6 +200,15 @@ html, body {
 .tree-label { overflow: hidden; text-overflow: ellipsis; }
 .result-folder { color: var(--muted); font-size: 11px; margin-left: auto; padding-left: 8px; }
 
+/* ---------- Favoritos ---------- */
+.fav-root-row { font-weight: 500; }
+.fav-ico { color: #C89B3C; font-size: 16px; flex-shrink: 0; }
+.fav-badge { margin-left: auto; font-size: 10px; background: var(--hover); border-radius: 8px; padding: 1px 6px; color: var(--muted); }
+.fav-empty { padding-left: 38px; font-size: 12px; }
+.fav-note { padding-left: 38px !important; }
+.note-fav-star { color: #C89B3C; font-size: 11px; margin-left: auto; flex-shrink: 0; }
+.sidebar-sep { height: 1px; background: var(--border); margin: 6px 8px; }
+
 .empty { color: var(--muted); font-size: 13px; padding: 14px; }
 
 /* ---------- Folder view ---------- */

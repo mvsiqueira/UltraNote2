@@ -55,6 +55,33 @@
             <div class="sidebar-content">
                 @if (string.IsNullOrWhiteSpace(_query))
                 {
+                    <div class="tree-row fav-root-row" @onclick='() => { _favoritesExpanded = !_favoritesExpanded; StateHasChanged(); }'>
+                        <i class="ti @(_favoritesExpanded ? "ti-chevron-down" : "ti-chevron-right") chevron" aria-hidden="true"></i>
+                        <i class="ti ti-star-filled fav-ico" aria-hidden="true"></i>
+                        <span class="tree-label">Favoritos</span>
+                        @if (_favorites.Count > 0) { <span class="fav-badge">@_favorites.Count</span> }
+                    </div>
+                    @if (_favoritesExpanded)
+                    {
+                        @if (_favorites.Count == 0)
+                        {
+                            <p class="empty fav-empty">Nenhum favorito ainda.</p>
+                        }
+                        else
+                        {
+                            @foreach (var fav in _favorites)
+                            {
+                                <div class="tree-note fav-note @(fav.Id == SelectedNoteId ? "active" : "")"
+                                     @onclick="() => RequestSelectNote(fav.Id)"
+                                     @oncontextmenu:preventDefault="true"
+                                     @oncontextmenu="(e) => OpenNoteMenu(fav, e)">
+                                    <i class="ti ti-file-text note-ico" aria-hidden="true"></i>
+                                    <span class="tree-label">@fav.Title</span>
+                                </div>
+                            }
+                        }
+                    }
+                    <div class="sidebar-sep"></div>
                     <div class="tree-row tree-root @(_selectedFolderId is null ? "active" : "")" @onclick="SelectRoot">
                         <i class="ti ti-notebook folder-ico" aria-hidden="true"></i>
                         <span class="tree-label">Notas</span>
@@ -188,6 +215,11 @@
             }
             else
             {
+                <button @onclick="() => ToggleFavorite(_ctx.Note!)">
+                    <i class="ti @(_ctx.Note!.IsFavorite ? "ti-star-off" : "ti-star")" aria-hidden="true"></i>
+                    @(_ctx.Note!.IsFavorite ? "Desfavoritar" : "Favoritar")
+                </button>
+                <hr />
                 <button @onclick="() => RenameNote(_ctx.Note!)"><i class="ti ti-pencil" aria-hidden="true"></i>Renomear</button>
                 <button @onclick="() => OpenMoveNote(_ctx.Note!)"><i class="ti ti-folder-symlink" aria-hidden="true"></i>Mover...</button>
                 <button class="danger" @onclick="() => DeleteNote(_ctx.Note!)"><i class="ti ti-trash" aria-hidden="true"></i>Excluir</button>
@@ -355,6 +387,9 @@
     private string _query = "";
     private List<NoteSummaryDto> _searchResults = new();
 
+    private List<NoteSummaryDto> _favorites = new();
+    private bool _favoritesExpanded = true;
+
     private CtxMenu? _ctx;
     private Func<Task>? _pendingAction;
     private bool _saving;
@@ -377,7 +412,11 @@
     public Guid? SelectedFolderId => _selectedFolderId;
     public bool TreeSelectionIsNote => _treeSelectionIsNote;
 
-    protected override async Task OnInitializedAsync() => await LoadFolders();
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFolders();
+        await LoadFavorites();
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -454,6 +493,34 @@
     {
         try { _notes[folderId] = (await Api.GetNotesAsync(folderId)).ToList(); }
         catch (Exception ex) { _status = $"Erro ao carregar notas: {ex.Message}"; }
+    }
+
+    private async Task LoadFavorites()
+    {
+        try { _favorites = (await Api.GetFavoritesAsync()).ToList(); }
+        catch (Exception ex) { _status = $"Erro ao carregar favoritos: {ex.Message}"; }
+    }
+
+    public async Task ToggleFavorite(NoteSummaryDto note)
+    {
+        CloseMenus();
+        var newVal = !note.IsFavorite;
+        try
+        {
+            await Api.UpdateNoteAsync(note.Id, new UpdateNoteRequest(null, null, null, newVal));
+            // Atualiza cache da pasta
+            if (_notes.TryGetValue(note.FolderId, out var list))
+            {
+                var idx = list.FindIndex(n => n.Id == note.Id);
+                if (idx >= 0) list[idx] = list[idx] with { IsFavorite = newVal };
+            }
+            // Atualiza resultados de busca
+            var sri = _searchResults.FindIndex(n => n.Id == note.Id);
+            if (sri >= 0) _searchResults[sri] = _searchResults[sri] with { IsFavorite = newVal };
+            await LoadFavorites();
+            StateHasChanged();
+        }
+        catch (Exception ex) { _status = $"Erro: {ex.Message}"; }
     }
 
     // ---------- Selection ----------

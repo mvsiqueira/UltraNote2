@@ -98,6 +98,9 @@ namespace UltraNote.Api.Migrations
                     b.Property<Guid>("FolderId")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsFavorite")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("TEXT");

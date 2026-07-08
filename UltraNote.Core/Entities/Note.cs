@@ -12,6 +12,8 @@ public class Note
     /// <summary>Rich-text body as HTML.</summary>
     public string ContentHtml { get; set; } = string.Empty;
 
+    public bool IsFavorite { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

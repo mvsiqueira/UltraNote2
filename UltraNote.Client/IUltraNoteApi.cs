@@ -11,6 +11,7 @@ public interface IUltraNoteApi
     Task<IReadOnlyList<FolderDto>> GetFoldersAsync(CancellationToken ct = default);
     Task<FolderDto?> GetFolderAsync(Guid id, CancellationToken ct = default);
     Task<IReadOnlyList<NoteSummaryDto>> GetNotesAsync(Guid folderId, CancellationToken ct = default);
+    Task<IReadOnlyList<NoteSummaryDto>> GetFavoritesAsync(CancellationToken ct = default);
     Task<FolderDto> CreateFolderAsync(CreateFolderRequest req, CancellationToken ct = default);
     Task<FolderDto> UpdateFolderAsync(Guid id, UpdateFolderRequest req, CancellationToken ct = default);
     Task DeleteFolderAsync(Guid id, CancellationToken ct = default);
