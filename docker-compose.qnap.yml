@@ -30,6 +30,7 @@ services:
       - Auth__GoogleClientId=465011248657-u7febuihd7f4s0j551pp38aaq1sfevn4.apps.googleusercontent.com
       - Auth__AllowedEmails__0=negrume@gmail.com
       - Auth__AllowedEmails__1=mvsiqueira@gmail.com
+      - Cors__AllowedOrigins__0=https://note.ultrasoft.app.br
     volumes:
       - /share/Container/ultranote-app/_out_api:/app
       - /share/Container/ultranote-data:/data

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
@@ -25,6 +26,14 @@ public static class GoogleAuth
 {
     public const string EmailAllowlistPolicy = "EmailAllowlist";
 
+    /// <summary>
+    /// Cookie scheme used only so attachment URLs embedded directly in note HTML
+    /// (&lt;img src&gt;, &lt;a href&gt;) can authenticate — those requests are plain
+    /// browser resource loads that never carry the app's Bearer token. Minted by
+    /// POST /api/auth/session once the client already holds a valid Bearer token.
+    /// </summary>
+    public const string CookieScheme = "AttachmentCookie";
+
     public static IServiceCollection AddGoogleAuth(this IServiceCollection services, IConfiguration config)
     {
         var options = config.GetSection(AuthOptions.SectionName).Get<AuthOptions>() ?? new AuthOptions();
@@ -44,11 +53,35 @@ public static class GoogleAuth
                     ValidateIssuer = true,
                     ValidateLifetime = true,
                 };
+            })
+            .AddCookie(CookieScheme, cookie =>
+            {
+                cookie.Cookie.Name = "un_session";
+                cookie.Cookie.HttpOnly = true;
+                cookie.Cookie.SameSite = SameSiteMode.Lax;
+                cookie.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                cookie.ExpireTimeSpan = TimeSpan.FromHours(24);
+                cookie.SlidingExpiration = true;
+                // API only — never redirect to an HTML login page, just fail with the status code.
+                cookie.Events.OnRedirectToLogin = ctx =>
+                {
+                    ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    return Task.CompletedTask;
+                };
+                cookie.Events.OnRedirectToAccessDenied = ctx =>
+                {
+                    ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    return Task.CompletedTask;
+                };
             });
 
         services.AddAuthorization(auth =>
         {
             auth.AddPolicy(EmailAllowlistPolicy, policy =>
+            {
+                // Either scheme proves the same identity; the cookie is just minted from
+                // an already-verified Bearer token (see POST /api/auth/session).
+                policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme, CookieScheme);
                 policy.RequireAssertion(ctx =>
                 {
                     // Empty allowlist => any authenticated Google account is accepted.
@@ -59,7 +92,8 @@ public static class GoogleAuth
                                 ?? ctx.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
                     return email is not null &&
                            options.AllowedEmails.Contains(email, StringComparer.OrdinalIgnoreCase);
-                }));
+                });
+            });
         });
 
         return services;

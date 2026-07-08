@@ -35,7 +35,7 @@ Backlog de evolução. Marque `[x]` ao concluir. Prioridade sugerida de cima par
 - [x] **Salvar estado** (pastas abertas e fechadas e nota selecionada)
 - [x] **Importar do Evernote** — importar arquivo `.enex` (formato de exportação do Evernote): criar pastas/notas preservando estrutura e conteúdo HTML.
   - [x] Erros de upload de anexo durante a importação (rede, resposta inválida da API) agora aparecem na tela em vez de falhar silenciosamente — antes um anexo que falhasse virava um link quebrado sem nenhum aviso.
-  - [x] **Causa raiz do "anexo não vem" em produção**: `GET /api/attachments/{id}` exigia login, mas o link é acessado pelo navegador como requisição crua (sem o Bearer token) — sempre dava 401. Endpoint marcado `AllowAnonymous` (protegido só pelo GUID não-adivinhável); upload/renomear/excluir continuam exigindo login. Só reproduzia em produção (dev roda sem auth).
+  - [x] **Causa raiz do "anexo não vem" em produção**: `GET /api/attachments/{id}` exigia login, mas o link é acessado pelo navegador como requisição crua (sem o Bearer token) — sempre dava 401. Só reproduzia em produção (dev roda sem auth). Corrigido com cookie de sessão (ver item em "Autenticação / sessão").
 - [x] **Notas favoritas** — seção "Favoritos" na barra lateral (mostrar/ocultar via toolbar, estado persistido em localStorage), toggle por estrela no cabeçalho do editor e no menu de contexto, indicador na árvore.
 
 ## 3. UX e robustez
@@ -62,7 +62,8 @@ Backlog de evolução. Marque `[x]` ao concluir. Prioridade sugerida de cima par
 ## 4. Autenticação / sessão
 
 - [x] **Persistir / renovar o token** Google na web — token em localStorage (sobrevive a refresh) + auto-select silencioso renovando antes de expirar.
-- [ ] Restringir **CORS** da API para `https://note.ultrasoft.app.br` (hoje libera qualquer origem).
+- [x] Restringir **CORS** da API para `https://note.ultrasoft.app.br` em produção (`Cors:AllowedOrigins`, `AllowCredentials`); dev sem origens configuradas continua permissivo.
+- [x] **Cookie de sessão para anexos** — `<img src>`/`<a href>` embutidos na nota não carregam o Bearer token (requisição crua do navegador). `POST /api/auth/session` (chamado a cada login/renovação de token) planta um cookie `HttpOnly; Secure; SameSite=Lax` (esquema `AttachmentCookie`, expira em 24h com renovação deslizante) que a API aceita como alternativa ao Bearer em qualquer endpoint. Revogável trocando a chave de Data Protection — ao contrário do GUID público que era usado antes.
 - [ ] (Opcional) **Cloudflare Access** como camada extra na URL da web.
 
 ## 5. App Windows (desktop)

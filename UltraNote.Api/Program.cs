@@ -16,9 +16,17 @@ builder.Services.AddGoogleAuth(builder.Configuration);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// CORS: allow the desktop/web clients to call the API (tighten origins later, per environment).
+// CORS: allow the desktop/web clients to call the API. When specific origins are
+// configured (production), credentials (the AttachmentCookie) are allowed too — the
+// browser rejects AllowCredentials combined with AllowAnyOrigin, so dev (no configured
+// origins) falls back to the permissive, credentials-less policy.
+var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
-    p.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin()));
+{
+    p.AllowAnyHeader().AllowAnyMethod();
+    if (corsOrigins.Length > 0) p.WithOrigins(corsOrigins).AllowCredentials();
+    else p.AllowAnyOrigin();
+}));
 
 var app = builder.Build();
 
@@ -46,6 +54,7 @@ var api = app.MapGroup("/api");
 api.MapFolderEndpoints();
 api.MapNoteEndpoints();
 api.MapAttachmentEndpoints();
+api.MapAuthEndpoints();
 
 // Only enforce the allowlist when auth is enabled; otherwise the API stays open for local dev.
 if (authOptions.Enabled)

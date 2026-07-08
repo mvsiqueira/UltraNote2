@@ -112,14 +112,9 @@ DELETE /api/notes/{id}
 POST   /api/notes/{id}/attachments  → upload de imagem/anexo
 ```
 
-Todos exigem `Authorization: Bearer <token Google>`; a API confere o e-mail na
-allowlist antes de responder — **exceto** `GET /api/attachments/{id}` (serve o
-binário do arquivo), que é `AllowAnonymous`. Esse endpoint é referenciado
-diretamente em `<img src>`/`<a href>` embutidos no HTML da nota; o navegador
-busca esses recursos como requisição "crua" (não passa pelo `HttpClient`
-autenticado do app), então nunca carrega o Bearer token. A proteção nesse caso
-é o `Id` (GUID não-adivinhável) do anexo — upload/renomear/excluir continuam
-exigindo login.
+Todos exigem `Authorization: Bearer <token Google>` **ou** o cookie de sessão
+(`POST /api/auth/session`, ver §7) — a API confere o e-mail na allowlist antes
+de responder, por qualquer um dos dois caminhos.
 
 ---
 
@@ -138,6 +133,21 @@ fora de escopo por ora). Salvar exige conexão.
 recebe um token, a **API** valida o token e confere se o e-mail está na allowlist
 (`negrume@gmail.com`). Só então libera. Cobre web e as chamadas REST do desktop
 com o mesmo modelo. Requer registrar um *OAuth Client* no Google Cloud Console.
+
+**Cookie de sessão para anexos:** `<img src>`/`<a href>` embutidos no HTML da
+nota apontam pra `GET /api/attachments/{id}` — o navegador busca esses recursos
+como requisição "crua" (não passa pelo `HttpClient` autenticado do app), então
+nunca carrega o Bearer token. Solução: o app chama `POST /api/auth/session`
+(com o Bearer) toda vez que obtém um token novo (login e renovação silenciosa),
+e a API devolve um cookie `HttpOnly; Secure; SameSite=Lax` (esquema de auth
+separado, `AttachmentCookie`, ver `GoogleAuth.cs`) que o navegador passa a
+enviar sozinho em qualquer requisição pro domínio da API — incluindo imagens e
+cliques em link. O cookie é *stateless* (claims assinadas pelo próprio
+ASP.NET Core Data Protection), expira em 24h com renovação deslizante, e
+qualquer endpoint aceita Bearer **ou** esse cookie (mesma policy de allowlist).
+Exige CORS com origem específica + `AllowCredentials` em produção (`Cors:AllowedOrigins`
+no `appsettings`/`docker-compose.qnap.yml`) — em dev, sem origens configuradas,
+cai no CORS permissivo de sempre (auth desligada localmente, o fluxo nem roda).
 
 **Descartado como principal — Cloudflare Access (Zero Trust):** protegeria
 `note.ultrasoft.app.br` na borda usando Google como provedor, sem código de auth

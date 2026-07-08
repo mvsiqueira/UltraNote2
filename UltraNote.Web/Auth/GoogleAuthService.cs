@@ -1,4 +1,6 @@
+using System.Net.Http.Headers;
 using System.Text.Json;
+using Microsoft.AspNetCore.Components.WebAssembly.Http;
 using Microsoft.JSInterop;
 
 namespace UltraNote.Web.Auth;
@@ -8,7 +10,7 @@ namespace UltraNote.Web.Auth;
 /// the ID token is cached in localStorage (survives refresh) and silently renewed via
 /// auto-select before it expires.
 /// </summary>
-public class GoogleAuthService(IJSRuntime js, IConfiguration config) : IAsyncDisposable
+public class GoogleAuthService(IJSRuntime js, IConfiguration config, IHttpClientFactory httpFactory) : IAsyncDisposable
 {
     private IJSObjectReference? _module;
     private DotNetObjectReference<GoogleAuthService>? _selfRef;
@@ -81,7 +83,25 @@ public class GoogleAuthService(IJSRuntime js, IConfiguration config) : IAsyncDis
         Email = email;
         Name = name;
         ScheduleRefresh(exp);
+        _ = EstablishSessionAsync(token);
         OnChange?.Invoke();
+    }
+
+    // Mints the attachment-access cookie (UltraNote.Api's GoogleAuth.CookieScheme) so
+    // <img>/<a> links embedded in note HTML — which never carry the Bearer header — can
+    // still authenticate. Best-effort: on failure, attachment links just won't load until
+    // the next silent token refresh retries this.
+    private async Task EstablishSessionAsync(string token)
+    {
+        try
+        {
+            var client = httpFactory.CreateClient("api");
+            var req = new HttpRequestMessage(HttpMethod.Post, "api/auth/session");
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            req.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
+            await client.SendAsync(req);
+        }
+        catch { }
     }
 
     // Silently re-issue the token shortly before it expires (auto-select One Tap).
