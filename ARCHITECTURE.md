@@ -113,7 +113,13 @@ POST   /api/notes/{id}/attachments  → upload de imagem/anexo
 ```
 
 Todos exigem `Authorization: Bearer <token Google>`; a API confere o e-mail na
-allowlist antes de responder.
+allowlist antes de responder — **exceto** `GET /api/attachments/{id}` (serve o
+binário do arquivo), que é `AllowAnonymous`. Esse endpoint é referenciado
+diretamente em `<img src>`/`<a href>` embutidos no HTML da nota; o navegador
+busca esses recursos como requisição "crua" (não passa pelo `HttpClient`
+autenticado do app), então nunca carrega o Bearer token. A proteção nesse caso
+é o `Id` (GUID não-adivinhável) do anexo — upload/renomear/excluir continuam
+exigindo login.
 
 ---
 

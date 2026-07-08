@@ -56,6 +56,9 @@ public static class AttachmentEndpoints
 
         // Serve the binary. Without ?download=true: inline (for double-click preview).
         // With ?download=true: attachment disposition (forces browser download).
+        // Anonymous: this URL is embedded directly in note HTML (<img src>, <a href>) and
+        // fetched by the browser as a plain resource request, which never carries the
+        // app's bearer token. Access is gated by the attachment's unguessable GUID instead.
         g.MapGet("/{id:guid}", async (Guid id, bool? download, AppDbContext db, IAttachmentStorage storage) =>
         {
             var att = await db.Attachments.FindAsync(id);
@@ -65,7 +68,7 @@ public static class AttachmentEndpoints
             return download == true
                 ? Results.File(stream, att.ContentType, att.FileName)
                 : Results.File(stream, att.ContentType);
-        });
+        }).AllowAnonymous();
 
         g.MapPatch("/{id:guid}", async (Guid id, RenameAttachmentRequest req, AppDbContext db) =>
         {
