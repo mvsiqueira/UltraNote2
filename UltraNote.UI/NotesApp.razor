@@ -123,10 +123,10 @@
             {
                 <div class="editor-head">
                     <input class="title-input" @bind="_title" @bind:event="oninput" />
-                    <button class="icon-btn star-btn @(_selectedNote.IsFavorite ? "star-active" : "")"
-                            title="@(_selectedNote.IsFavorite ? "Desfavoritar" : "Favoritar")"
+                    <button class='icon-btn star-btn @(_selectedNote.IsFavorite ? "star-active" : "")'
+                            title='@(_selectedNote.IsFavorite ? "Desfavoritar" : "Favoritar")'
                             @onclick="ToggleFavoriteCurrentNote">
-                        <i class="ti @(_selectedNote.IsFavorite ? "ti-star-filled" : "ti-star")" aria-hidden="true"></i>
+                        <i class='ti @(_selectedNote.IsFavorite ? "ti-star-filled" : "ti-star")' aria-hidden="true"></i>
                     </button>
                     <button class="btn-accent" @onclick="SaveNote" disabled="@_saving">@(_saving ? "Salvando…" : _dirty ? "Salvar *" : "Salvar")</button>
                 </div>
