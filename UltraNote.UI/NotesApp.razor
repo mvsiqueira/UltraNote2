@@ -47,22 +47,34 @@
             <div class="sidebar-toolbar">
                 <button class="icon-btn" title="Nova pasta" @onclick="ToolbarNewFolder"><i class="ti ti-folder-plus" aria-hidden="true"></i></button>
                 <button class="icon-btn" title="Nova nota" @onclick="ToolbarNewNote" disabled="@(_selectedFolderId is null)"><i class="ti ti-file-plus" aria-hidden="true"></i></button>
+                <button class="icon-btn danger" title="Excluir" @onclick="ToolbarDelete" disabled="@(!CanToolbarDelete)"><i class="ti ti-trash" aria-hidden="true"></i></button>
+                <div class="toolbar-sep"></div>
                 <button class="icon-btn" title="Recolher tudo" @onclick="CollapseAll"><i class="ti ti-chevrons-left" aria-hidden="true"></i></button>
                 <button class="icon-btn" title="Expandir tudo" @onclick="ToolbarExpandAll"><i class="ti ti-chevrons-right" aria-hidden="true"></i></button>
-                <button class="icon-btn" title="Importar do Evernote" @onclick="OpenImport"><i class="ti ti-file-import" aria-hidden="true"></i></button>
-                <button class="icon-btn danger" title="Excluir" @onclick="ToolbarDelete" disabled="@(!CanToolbarDelete)"><i class="ti ti-trash" aria-hidden="true"></i></button>
+                @if (_favoritesVisible)
+                {
+                    <button class="icon-btn active" title="Ocultar favoritos" @onclick="ToggleFavoritesVisible">
+                        <svg class="star-filled-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.243 7.34l-6.38.925-.113.023a1 1 0 0 0-.44 1.684l4.622 4.499-1.09 6.355-.013.11a1 1 0 0 0 1.464.944l5.706-3 5.693 3 .1.046a1 1 0 0 0 1.352-1.1l-1.091-6.355 4.624-4.5.078-.085a1 1 0 0 0-.633-1.62l-6.38-.926-2.852-5.78a1 1 0 0 0-1.794 0l-2.853 5.78z"/></svg>
+                    </button>
+                }
+                else
+                {
+                    <button class="icon-btn" title="Exibir favoritos" @onclick="ToggleFavoritesVisible">
+                        <i class="ti ti-star" aria-hidden="true"></i>
+                    </button>
+                }
+                <button class="icon-btn push-right" title="Ferramentas" @onclick="OpenToolsMenu"><i class="ti ti-dots-vertical" aria-hidden="true"></i></button>
             </div>
             <div class="sidebar-content">
                 @if (string.IsNullOrWhiteSpace(_query))
                 {
-                    <div class="tree-row fav-root-row" @onclick='() => { _favoritesExpanded = !_favoritesExpanded; StateHasChanged(); }'>
-                        <i class="ti @(_favoritesExpanded ? "ti-chevron-down" : "ti-chevron-right") chevron" aria-hidden="true"></i>
-                        <i class="ti ti-star-filled fav-ico" aria-hidden="true"></i>
-                        <span class="tree-label">Favoritos</span>
-                        @if (_favorites.Count > 0) { <span class="fav-badge">@_favorites.Count</span> }
-                    </div>
-                    @if (_favoritesExpanded)
+                    @if (_favoritesVisible)
                     {
+                        <div class="tree-row fav-root-row">
+                            <svg class="star-filled-svg fav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.243 7.34l-6.38.925-.113.023a1 1 0 0 0-.44 1.684l4.622 4.499-1.09 6.355-.013.11a1 1 0 0 0 1.464.944l5.706-3 5.693 3 .1.046a1 1 0 0 0 1.352-1.1l-1.091-6.355 4.624-4.5.078-.085a1 1 0 0 0-.633-1.62l-6.38-.926-2.852-5.78a1 1 0 0 0-1.794 0l-2.853 5.78z"/></svg>
+                            <span class="tree-label">Favoritos</span>
+                            @if (_favorites.Count > 0) { <span class="fav-badge">@_favorites.Count</span> }
+                        </div>
                         @if (_favorites.Count == 0)
                         {
                             <p class="empty fav-empty">Nenhum favorito ainda.</p>
@@ -80,8 +92,8 @@
                                 </div>
                             }
                         }
+                        <div class="sidebar-sep"></div>
                     }
-                    <div class="sidebar-sep"></div>
                     <div class="tree-row tree-root @(_selectedFolderId is null ? "active" : "")" @onclick="SelectRoot">
                         <i class="ti ti-notebook folder-ico" aria-hidden="true"></i>
                         <span class="tree-label">Notas</span>
@@ -125,8 +137,8 @@
                     <input class="title-input" @bind="_title" @bind:event="oninput" />
                     @if (_selectedNote.IsFavorite)
                     {
-                        <button class="icon-btn star-btn star-active" title="Desfavoritar" @onclick="ToggleFavoriteCurrentNote">
-                            <i class="ti ti-star-filled" aria-hidden="true"></i>
+                        <button class="icon-btn star-btn" title="Desfavoritar" @onclick="ToggleFavoriteCurrentNote">
+                            <svg class="star-filled-svg" style="color:#C89B3C" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.243 7.34l-6.38.925-.113.023a1 1 0 0 0-.44 1.684l4.622 4.499-1.09 6.355-.013.11a1 1 0 0 0 1.464.944l5.706-3 5.693 3 .1.046a1 1 0 0 0 1.352-1.1l-1.091-6.355 4.624-4.5.078-.085a1 1 0 0 0-.633-1.62l-6.38-.926-2.852-5.78a1 1 0 0 0-1.794 0l-2.853 5.78z"/></svg>
                         </button>
                     }
                     else
@@ -225,6 +237,10 @@
                 <button @onclick="() => OpenMoveFolder(_ctx.Folder!)"><i class="ti ti-folder-symlink" aria-hidden="true"></i>Mover...</button>
                 <button class="danger" @onclick="() => DeleteFolder(_ctx.Folder!)"><i class="ti ti-trash" aria-hidden="true"></i>Excluir</button>
             }
+            else if (_ctx.Kind == "tools")
+            {
+                <button @onclick="() => { CloseMenus(); OpenImport(); }"><i class="ti ti-file-import" aria-hidden="true"></i>Importar do Evernote</button>
+            }
             else
             {
                 <button @onclick="() => ToggleFavorite(_ctx.Note!)">
@@ -243,6 +259,7 @@
     {
         <div class="menu-backdrop" @onclick="CloseAttachmentMenu" @oncontextmenu:preventDefault="true" @oncontextmenu="CloseAttachmentMenu"></div>
         <div class="menu" style="left:@($"{_attCtx.X}px");top:@($"{_attCtx.Y}px")">
+            <button @onclick="InsertAttachmentLinkFromCtx"><i class="ti ti-link" aria-hidden="true"></i>Inserir link no texto</button>
             <button @onclick="RenameAttachment"><i class="ti ti-pencil" aria-hidden="true"></i>Renomear</button>
             <button class="danger" @onclick="DeleteAttachmentFromCtx"><i class="ti ti-trash" aria-hidden="true"></i>Excluir</button>
         </div>
@@ -400,7 +417,7 @@
     private List<NoteSummaryDto> _searchResults = new();
 
     private List<NoteSummaryDto> _favorites = new();
-    private bool _favoritesExpanded = true;
+    private bool _favoritesVisible = true;
 
     private CtxMenu? _ctx;
     private Func<Task>? _pendingAction;
@@ -444,6 +461,8 @@
             var savedId = await JS.InvokeAsync<string?>("localStorage.getItem", "ultranote_selected_note");
             if (savedId is not null && Guid.TryParse(savedId, out var restoredNoteId))
                 await SelectNoteNow(restoredNoteId);
+            var savedFavVisible = await JS.InvokeAsync<string?>("localStorage.getItem", "ultranote_favorites_visible");
+            if (savedFavVisible is not null) _favoritesVisible = savedFavVisible == "true";
             StateHasChanged();
         }
 
@@ -511,6 +530,12 @@
     {
         try { _favorites = (await Api.GetFavoritesAsync()).ToList(); }
         catch (Exception ex) { _status = $"Erro ao carregar favoritos: {ex.Message}"; }
+    }
+
+    private async Task ToggleFavoritesVisible()
+    {
+        _favoritesVisible = !_favoritesVisible;
+        await JS.InvokeVoidAsync("localStorage.setItem", "ultranote_favorites_visible", _favoritesVisible ? "true" : "false");
     }
 
     public async Task ToggleFavorite(NoteSummaryDto note)
@@ -652,6 +677,7 @@
 
     // ---------- Menus ----------
     private void OpenNewMenu(MouseEventArgs e) => _ctx = new CtxMenu(e.ClientX - 150, e.ClientY + 14, "new", null, null);
+    private void OpenToolsMenu(MouseEventArgs e) => _ctx = new CtxMenu(e.ClientX - 150, e.ClientY + 14, "tools", null, null);
     public void OpenFolderMenu(FolderDto f, MouseEventArgs e) { _selectedFolderId = f.Id; _ctx = new CtxMenu(e.ClientX, e.ClientY, "folder", f, null); StateHasChanged(); }
     public void OpenNoteMenu(NoteSummaryDto n, MouseEventArgs e) { _ctx = new CtxMenu(e.ClientX, e.ClientY, "note", null, n); StateHasChanged(); }
     private void CloseMenus() => _ctx = null;
@@ -1022,6 +1048,14 @@
         _attCtx = new AttachmentCtxMenu(e.ClientX, e.ClientY, att);
 
     private void CloseAttachmentMenu() => _attCtx = null;
+
+    private async Task InsertAttachmentLinkFromCtx()
+    {
+        if (_attCtx is null || _editor is null) return;
+        var att = _attCtx.Attachment;
+        CloseAttachmentMenu();
+        await _editor.InsertAttachmentLinkAsync(Api.GetAttachmentDownloadUrl(att.Id), att.FileName);
+    }
 
     private async Task RenameAttachment()
     {

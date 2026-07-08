@@ -21,7 +21,7 @@ Backlog de evolução. Marque `[x]` ao concluir. Prioridade sugerida de cima par
   - [x] **Indentação** (aumentar/diminuir recuo, `data-indent` attribute).
   - [x] Menu de contexto (botão direito): formatação sempre; operações de tabela só dentro de uma tabela.
 - [x] **Colar/dropar/toolbar imagem** no editor → upload via API → embutida no HTML com suporte a redimensionamento e menu de contexto (excluir imagem).
-- [ ] **Anexos no corpo da nota** — inserir arquivos não-imagem como um "file node" inline no TipTap: bloco com ícone + nome + link de download embutido no HTML da nota (hoje os anexos ficam em painel separado abaixo do editor).
+- [x] **Anexos no corpo da nota** — menu de contexto do anexo (painel abaixo do editor) tem "Inserir link no texto": cria um `<a class="attachment-link">` apontando pro download, com ícone de clipe e sublinhado tracejado (mais simples que um file node customizado no TipTap; anexo continua listado no painel também).
 - [x] **Remover formatação** — botão na toolbar que limpa todas as marcas (negrito, cor, realce, etc.) do texto selecionado.
 - [x] **Melhorar menu de contexto** — revisar itens, agrupar melhor, adicionar ícones mais claros.
 - [x] **Melhorar color picker** — paleta mais rica, preview em tempo real, histórico de cores usadas.
@@ -34,7 +34,7 @@ Backlog de evolução. Marque `[x]` ao concluir. Prioridade sugerida de cima par
 - [x] **Mover** nota/pasta — menu de contexto "Mover...", modal com seletor de destino (pastas descendentes excluídas para evitar ciclo).
 - [x] **Salvar estado** (pastas abertas e fechadas e nota selecionada)
 - [x] **Importar do Evernote** — importar arquivo `.enex` (formato de exportação do Evernote): criar pastas/notas preservando estrutura e conteúdo HTML.
-- [ ] Notas favoritas
+- [x] **Notas favoritas** — seção "Favoritos" na barra lateral (mostrar/ocultar via toolbar, estado persistido em localStorage), toggle por estrela no cabeçalho do editor e no menu de contexto, indicador na árvore.
 
 ## 3. UX e robustez
 

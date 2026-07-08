@@ -17,6 +17,20 @@ import TableRow from "@tiptap/extension-table-row";
 import TableHeader from "@tiptap/extension-table-header";
 import TableCell from "@tiptap/extension-table-cell";
 
+// Link extension extended to preserve a class attribute (used to mark attachment links).
+const AttachmentAwareLink = Link.extend({
+    addAttributes() {
+        return {
+            ...this.parent?.(),
+            class: {
+                default: null,
+                parseHTML: (el) => el.getAttribute("class"),
+                renderHTML: (attrs) => (attrs.class ? { class: attrs.class } : {}),
+            },
+        };
+    },
+});
+
 // Image extension extended to persist width attribute
 const ResizableImage = Image.extend({
     addAttributes() {
@@ -302,7 +316,7 @@ export function attach(el, dotNetRef) {
             Color,
             Highlight.configure({ multicolor: true }),
             IndentExtension,
-            Link.configure({ openOnClick: false }),
+            AttachmentAwareLink.configure({ openOnClick: false }),
             Placeholder.configure({ placeholder: "Escreva sua nota..." }),
             ResizableImage.configure({ inline: false, HTMLAttributes: { class: "rte-image" } }),
             Table.configure({ resizable: true, cellMinWidth: 36, lastColumnResizable: true }),
@@ -562,6 +576,16 @@ async function uploadAndInsert(file, editor, dotNetRef) {
     } catch (err) {
         console.error("[UltraNote] Image upload failed", err);
     }
+}
+
+export function insertAttachmentLink(el, href, fileName) {
+    const editor = get(el);
+    if (!editor) return;
+    const safeHref = href.replace(/"/g, "&quot;");
+    const safeName = fileName.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    editor.chain().focus().insertContent(
+        `<a href="${safeHref}" class="attachment-link">${safeName}</a>&nbsp;`,
+    ).run();
 }
 
 export function insertImageFromFile(el, dotNetRef) {

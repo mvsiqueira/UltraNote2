@@ -83,7 +83,7 @@ produz hoje), guardado numa coluna.
 
 ```
 Folder(Id, ParentId, Name, Path, CreatedAt, UpdatedAt)
-Note(Id, FolderId, Title, ContentHtml, CreatedAt, UpdatedAt)
+Note(Id, FolderId, Title, ContentHtml, CreatedAt, UpdatedAt, IsFavorite)
 Attachment(Id, NoteId, FileName, ContentType, StoragePath, CreatedAt)
 ```
 
@@ -105,6 +105,7 @@ PUT    /api/folders/{id}            → renomeia/move
 DELETE /api/folders/{id}            → exclui (com filhos)
 GET    /api/folders/{id}/notes      → notas da pasta
 GET    /api/notes/{id}              → nota + conteúdo
+GET    /api/notes/favorites         → notas favoritadas
 POST   /api/notes                   → cria
 PUT    /api/notes/{id}              → salva
 DELETE /api/notes/{id}

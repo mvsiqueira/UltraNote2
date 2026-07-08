@@ -242,6 +242,12 @@
         if (!string.IsNullOrWhiteSpace(url)) await Exec("link", url);
     }
 
+    public async Task InsertAttachmentLinkAsync(string href, string fileName)
+    {
+        if (_module is null) return;
+        await _module.InvokeVoidAsync("insertAttachmentLink", _surface, href, fileName);
+    }
+
     private async Task InsertImageFromFile()
     {
         if (_module is null) return;
