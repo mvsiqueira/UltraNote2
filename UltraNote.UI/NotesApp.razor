@@ -731,7 +731,7 @@
         if (string.IsNullOrWhiteSpace(name) || name == folder.Name) return;
         try
         {
-            await Api.UpdateFolderAsync(folder.Id, new UpdateFolderRequest(name, null));
+            await Api.UpdateFolderAsync(folder.Id, new UpdateFolderRequest(name, folder.ParentId));
             await LoadFolders();
             _status = $"Pasta renomeada: {name}";
         }
