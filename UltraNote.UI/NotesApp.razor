@@ -42,7 +42,7 @@
         </div>
     </header>
 
-    <div class="body">
+    <div class="body" @ref="_bodyEl">
         <aside class="sidebar">
             <div class="sidebar-toolbar">
                 <button class="icon-btn" title="Nova pasta" @onclick="ToolbarNewFolder"><i class="ti ti-folder-plus" aria-hidden="true"></i></button>
@@ -129,6 +129,8 @@
                 }
             </div>
         </aside>
+
+        <div class="sidebar-resize-handle" @ref="_resizeHandle"></div>
 
         <section class="editor-panel">
             @if (_treeSelectionIsNote && _selectedNote is not null)
@@ -442,8 +444,11 @@
     private IJSObjectReference? _unsavedJs;
     private IJSObjectReference? _shortcutsJs;
     private IJSObjectReference? _dropZoneJs;
+    private IJSObjectReference? _sidebarResizeJs;
     private DotNetObjectReference<NotesApp>? _shortcutsRef;
     private ElementReference _attBar;
+    private ElementReference _bodyEl;
+    private ElementReference _resizeHandle;
     private bool _dropZoneInitialized;
 
     public Guid? SelectedNoteId => _selectedNote?.Id;
@@ -465,6 +470,8 @@
             _unsavedJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-unsaved.js");
             _shortcutsJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-shortcuts.js");
             _dropZoneJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-dropzone.js");
+            _sidebarResizeJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-sidebar-resize.js");
+            await _sidebarResizeJs.InvokeVoidAsync("init", _bodyEl, _resizeHandle);
             _shortcutsRef = DotNetObjectReference.Create(this);
             await _shortcutsJs.InvokeVoidAsync("init", _shortcutsRef);
             var savedId = await JS.InvokeAsync<string?>("localStorage.getItem", "ultranote_selected_note");
@@ -1235,6 +1242,11 @@
         {
             try { if (_dropZoneInitialized) await _dropZoneJs.InvokeVoidAsync("dispose", _attBar); } catch (JSDisconnectedException) { }
             try { await _dropZoneJs.DisposeAsync(); } catch (JSDisconnectedException) { }
+        }
+        if (_sidebarResizeJs is not null)
+        {
+            try { await _sidebarResizeJs.InvokeVoidAsync("dispose", _resizeHandle); } catch (JSDisconnectedException) { }
+            try { await _sidebarResizeJs.DisposeAsync(); } catch (JSDisconnectedException) { }
         }
         _shortcutsRef?.Dispose();
     }
