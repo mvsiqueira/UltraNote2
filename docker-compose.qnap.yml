@@ -31,6 +31,7 @@ services:
       - Auth__AllowedEmails__0=negrume@gmail.com
       - Auth__AllowedEmails__1=mvsiqueira@gmail.com
       - Cors__AllowedOrigins__0=https://note.ultrasoft.app.br
+      - Cors__AllowedOrigins__1=https://note.ultrasoftinc.com.br
     volumes:
       - /share/Container/ultranote-app/_out_api:/app
       - /share/Container/ultranote-data:/data

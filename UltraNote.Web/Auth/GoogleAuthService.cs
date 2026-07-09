@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.AspNetCore.Components.WebAssembly.Http;
@@ -27,6 +28,10 @@ public class GoogleAuthService(IJSRuntime js, IConfiguration config, IHttpClient
     public string? Name { get; private set; }
     public bool IsAuthenticated => !IsEnabled || IdToken is not null;
 
+    /// <summary>True when the last sign-in attempt used a Google account not on the API's allowlist.</summary>
+    public bool AccessDenied { get; private set; }
+    public string? DeniedEmail { get; private set; }
+
     public event Action? OnChange;
 
     /// <summary>Loads GIS, wires the callback, and restores a still-valid cached token (no UI).</summary>
@@ -42,7 +47,7 @@ public class GoogleAuthService(IJSRuntime js, IConfiguration config, IHttpClient
         }
 
         var stored = await _module.InvokeAsync<string?>("getStored");
-        if (!string.IsNullOrEmpty(stored)) UseToken(stored);
+        if (!string.IsNullOrEmpty(stored)) await UseToken(stored);
     }
 
     /// <summary>Shows the sign-in button and tries a silent auto-select sign-in.</summary>
@@ -54,7 +59,7 @@ public class GoogleAuthService(IJSRuntime js, IConfiguration config, IHttpClient
     }
 
     [JSInvokable]
-    public void OnCredential(string idToken) => UseToken(idToken);
+    public Task OnCredential(string idToken) => UseToken(idToken);
 
     public async Task SignOutAsync()
     {
@@ -62,6 +67,8 @@ public class GoogleAuthService(IJSRuntime js, IConfiguration config, IHttpClient
         IdToken = null;
         Email = null;
         Name = null;
+        AccessDenied = false;
+        DeniedEmail = null;
         if (_module is not null)
         {
             try { await _module.InvokeVoidAsync("signOut"); } catch (JSDisconnectedException) { }
@@ -69,29 +76,56 @@ public class GoogleAuthService(IJSRuntime js, IConfiguration config, IHttpClient
         OnChange?.Invoke();
     }
 
-    private void UseToken(string token)
+    private async Task UseToken(string token)
     {
         var (email, name, exp) = Decode(token);
         // Reject already-expired tokens (30s skew); a fresh one will be fetched silently.
         if (exp <= DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 30)
         {
-            if (_module is not null) _ = _module.InvokeVoidAsync("signOut").AsTask();
+            if (_module is not null) await _module.InvokeVoidAsync("signOut");
             return;
         }
 
+        // Gate on the API's allowlist before granting UI access — a valid Google token
+        // alone isn't enough (the account may not be on Auth:AllowedEmails).
+        var result = await EstablishSessionAsync(token);
+        if (result == SessionResult.Denied)
+        {
+            AccessDenied = true;
+            DeniedEmail = email;
+            IdToken = null;
+            Email = null;
+            Name = null;
+            _refreshCts?.Cancel();
+            if (_module is not null) await _module.InvokeVoidAsync("signOut");
+            OnChange?.Invoke();
+            return;
+        }
+        // A transient failure (network/CORS) only gets the benefit of the doubt when it's
+        // refreshing the SAME account's already-established session — never for a first
+        // login or an account switch, otherwise a failed check would silently grant access.
+        var refreshingSameAccount = IdToken is not null && string.Equals(Email, email, StringComparison.OrdinalIgnoreCase);
+        if (result == SessionResult.Error && !refreshingSameAccount)
+        {
+            OnChange?.Invoke();
+            return;
+        }
+
+        AccessDenied = false;
+        DeniedEmail = null;
         IdToken = token;
         Email = email;
         Name = name;
         ScheduleRefresh(exp);
-        _ = EstablishSessionAsync(token);
         OnChange?.Invoke();
     }
 
-    // Mints the attachment-access cookie (UltraNote.Api's GoogleAuth.CookieScheme) so
-    // <img>/<a> links embedded in note HTML — which never carry the Bearer header — can
-    // still authenticate. Best-effort: on failure, attachment links just won't load until
-    // the next silent token refresh retries this.
-    private async Task EstablishSessionAsync(string token)
+    private enum SessionResult { Ok, Denied, Error }
+
+    // Verifies the token against the API's allowlist and, on success, mints the
+    // attachment-access cookie (UltraNote.Api's GoogleAuth.CookieScheme) so <img>/<a>
+    // links embedded in note HTML — which never carry the Bearer header — can authenticate.
+    private async Task<SessionResult> EstablishSessionAsync(string token)
     {
         try
         {
@@ -99,9 +133,16 @@ public class GoogleAuthService(IJSRuntime js, IConfiguration config, IHttpClient
             var req = new HttpRequestMessage(HttpMethod.Post, "api/auth/session");
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             req.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
-            await client.SendAsync(req);
+            var res = await client.SendAsync(req);
+            if (res.IsSuccessStatusCode) return SessionResult.Ok;
+            return res.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized
+                ? SessionResult.Denied
+                : SessionResult.Error;
         }
-        catch { }
+        catch
+        {
+            return SessionResult.Error;
+        }
     }
 
     // Silently re-issue the token shortly before it expires (auto-select One Tap).

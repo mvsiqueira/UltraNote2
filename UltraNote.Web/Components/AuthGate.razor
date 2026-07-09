@@ -12,7 +12,17 @@ else
         <div class="login-card">
             <i class="ti ti-notebook" aria-hidden="true"></i>
             <h1>UltraNote</h1>
-            <p>Entre com sua conta Google para acessar suas notas.</p>
+            @if (Auth.AccessDenied)
+            {
+                <p class="login-denied">
+                    A conta <strong>@Auth.DeniedEmail</strong> não tem acesso a este app.
+                    Entre com outra conta autorizada.
+                </p>
+            }
+            else
+            {
+                <p>Entre com sua conta Google para acessar suas notas.</p>
+            }
             <div id="google-signin-button"></div>
         </div>
     </div>
