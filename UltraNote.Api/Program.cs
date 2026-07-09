@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using UltraNote.Api.Auth;
 using UltraNote.Api.Data;
@@ -12,6 +13,19 @@ var connectionString = builder.Configuration.GetConnectionString("Db")
 builder.Services.AddDbContext<AppDbContext>(opt => opt.UseSqlite(connectionString));
 builder.Services.AddSingleton<IAttachmentStorage, FileSystemAttachmentStorage>();
 builder.Services.AddGoogleAuth(builder.Configuration);
+
+// Data Protection signs/encrypts the AttachmentCookie (see GoogleAuth.CookieScheme). Without
+// a persisted key ring, ASP.NET Core keeps it in the container's ephemeral filesystem — every
+// container recreate (redeploy) generates a new key and silently invalidates every cookie
+// already issued, so already-logged-in users start getting 401s until their next token
+// refresh. Persisting to the same volume as the SQLite db keeps the key stable across deploys.
+var keysPath = builder.Configuration["DataProtection:KeysPath"];
+if (!string.IsNullOrWhiteSpace(keysPath))
+{
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(keysPath))
+        .SetApplicationName("UltraNote");
+}
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
