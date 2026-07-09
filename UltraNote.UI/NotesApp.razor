@@ -237,11 +237,15 @@
                 <hr />
                 <button @onclick="() => RenameFolder(_ctx.Folder!)"><i class="ti ti-pencil" aria-hidden="true"></i>Renomear</button>
                 <button @onclick="() => OpenMoveFolder(_ctx.Folder!)"><i class="ti ti-folder-symlink" aria-hidden="true"></i>Mover...</button>
+                <button @onclick="() => ExportFolder(_ctx.Folder!)" disabled="@_exporting"><i class="ti ti-file-zip" aria-hidden="true"></i>Exportar pasta (.zip)</button>
                 <button class="danger" @onclick="() => DeleteFolder(_ctx.Folder!)"><i class="ti ti-trash" aria-hidden="true"></i>Excluir</button>
             }
             else if (_ctx.Kind == "tools")
             {
                 <button @onclick="() => { CloseMenus(); OpenImport(); }"><i class="ti ti-file-import" aria-hidden="true"></i>Importar do Evernote</button>
+                <hr />
+                <button @onclick="ExportFullBackup" disabled="@_exporting"><i class="ti ti-file-zip" aria-hidden="true"></i>Exportar backup completo (.zip)</button>
+                <button @onclick="() => { CloseMenus(); OpenRestore(); }"><i class="ti ti-database-import" aria-hidden="true"></i>Importar backup (.zip)</button>
             }
             else
             {
@@ -308,6 +312,58 @@
                         <label class="btn-accent" style="cursor:pointer">
                             Escolher arquivo
                             <InputFile style="display:none" OnChange="DoImport" accept=".enex" />
+                        </label>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (_restore is not null)
+    {
+        <div class="modal-backdrop">
+            <div class="modal-card">
+                <h2>Importar backup</h2>
+                @if (_restore.Importing)
+                {
+                    <p>Restaurando pasta @_restore.DoneFolders de @_restore.TotalFolders&hellip;</p>
+                    <div class="import-bar"><div class="import-fill" style="width:@(_restore.TotalFolders > 0 ? (_restore.DoneFolders * 100 / _restore.TotalFolders) : 0)%"></div></div>
+                    @if (!string.IsNullOrEmpty(_restore.Status))
+                    {
+                        <p class="import-status">@_restore.Status</p>
+                    }
+                }
+                else
+                {
+                    <p>Selecione um arquivo <strong>.zip</strong> gerado pelo "Exportar backup" e a pasta destino (as pastas do backup serão recriadas dentro dela).</p>
+                    <select class="modal-select" @bind="_restore.FolderIdStr">
+                        <option value="">— pasta destino —</option>
+                        @foreach (var f in _folders.OrderBy(f => f.Path))
+                        {
+                            <option value="@f.Id">@f.Path</option>
+                        }
+                    </select>
+                    @if (!string.IsNullOrEmpty(_restore.Status))
+                    {
+                        <p class="import-status">@_restore.Status</p>
+                    }
+                    @if (_restore.Errors.Count > 0)
+                    {
+                        <ul class="import-errors">
+                            @foreach (var err in _restore.Errors)
+                            {
+                                <li>@err</li>
+                            }
+                        </ul>
+                    }
+                }
+                <div class="modal-actions">
+                    <button class="btn-ghost" @onclick="CloseRestore" disabled="@_restore.Importing">Cancelar</button>
+                    @if (!_restore.Importing)
+                    {
+                        <label class="btn-accent" style="cursor:pointer">
+                            Escolher arquivo
+                            <InputFile style="display:none" OnChange="DoRestore" accept=".zip" />
                         </label>
                     }
                 </div>
@@ -406,6 +462,10 @@
 
     private sealed class ImportState { public string FolderIdStr = ""; public bool Importing; public int Total, Done, Failed; public string Status = ""; public List<string> Errors = new(); }
     private ImportState? _import;
+    private sealed class RestoreState { public string FolderIdStr = ""; public bool Importing; public int TotalFolders, DoneFolders, DoneNotes, FailedNotes; public string Status = ""; public List<string> Errors = new(); }
+    private RestoreState? _restore;
+    private bool _exporting;
+    private IJSObjectReference? _downloadJs;
     private record AttachmentCtxMenu(double X, double Y, AttachmentDto Attachment);
     private AttachmentCtxMenu? _attCtx;
 
@@ -471,6 +531,7 @@
             _shortcutsJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-shortcuts.js");
             _dropZoneJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-dropzone.js");
             _sidebarResizeJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-sidebar-resize.js");
+            _downloadJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-download.js");
             await _sidebarResizeJs.InvokeVoidAsync("init", _bodyEl, _resizeHandle);
             _shortcutsRef = DotNetObjectReference.Create(this);
             await _shortcutsJs.InvokeVoidAsync("init", _shortcutsRef);
@@ -1123,6 +1184,43 @@
         _ => "ti-file",
     };
 
+    // ---------- Backup export ----------
+
+    private async Task ExportFolder(FolderDto folder)
+    {
+        CloseMenus();
+        await RunExport(folder.Id, folder.Name);
+    }
+
+    private async Task ExportFullBackup()
+    {
+        CloseMenus();
+        await RunExport(null, $"ultranote-backup-{DateTime.Now:yyyy-MM-dd}");
+    }
+
+    private async Task RunExport(Guid? rootFolderId, string fileNameBase)
+    {
+        if (_exporting || _downloadJs is null) return;
+        _exporting = true;
+        _status = "Exportando...";
+        StateHasChanged();
+        try
+        {
+            var bytes = await BackupExporter.ExportAsync(Api, _folders, rootFolderId);
+            await _downloadJs.InvokeVoidAsync("downloadBytes", bytes, $"{fileNameBase}.zip", "application/zip");
+            _status = "Exportação concluída.";
+        }
+        catch (Exception ex)
+        {
+            _status = $"Erro ao exportar: {ex.Message}";
+        }
+        finally
+        {
+            _exporting = false;
+            StateHasChanged();
+        }
+    }
+
     // ---------- Evernote import ----------
 
     private void OpenImport() => _import = new ImportState();
@@ -1164,46 +1262,7 @@
             _import.Total = notes.Count;
             StateHasChanged();
 
-            foreach (var note in notes)
-            {
-                try
-                {
-                    // Create empty note to obtain the ID
-                    var created = await Api.CreateNoteAsync(new CreateNoteRequest(folderId, note.Title, "<p></p>"));
-
-                    // Upload resources; images become embedded, others become attachments
-                    var hashToUrl = new Dictionary<string, string>();
-                    foreach (var res in note.Resources)
-                    {
-                        try
-                        {
-                            using var ms = new MemoryStream(res.Data);
-                            var dto = await Api.UploadAttachmentAsync(
-                                created.Id, res.FileName, res.Mime, ms,
-                                isEmbedded: res.Mime.StartsWith("image/"));
-                            if (dto.Id == Guid.Empty)
-                                throw new InvalidOperationException("resposta da API sem ID de anexo válido");
-                            hashToUrl[res.Hash] = Api.GetAttachmentUrl(dto.Id);
-                        }
-                        catch (Exception ex)
-                        {
-                            _import.Errors.Add($"{note.Title} — anexo \"{res.FileName}\": {ex.Message}");
-                        }
-                    }
-
-                    // Convert ENML → HTML and persist the final content
-                    var html = EnexImporter.ConvertEnml(note.RawEnml, hashToUrl);
-                    await Api.UpdateNoteAsync(created.Id, new UpdateNoteRequest(note.Title, html, null));
-
-                    _import.Done++;
-                }
-                catch (Exception ex)
-                {
-                    _import.Failed++;
-                    _import.Errors.Add($"{note.Title}: {ex.Message}");
-                }
-                StateHasChanged();
-            }
+            await ImportNotesAsync(notes, folderId, _import);
 
             await LoadNotes(folderId);
             _import.Status = _import.Failed == 0
@@ -1216,6 +1275,152 @@
         }
 
         _import.Importing = false;
+        StateHasChanged();
+    }
+
+    // Creates each note, uploads its resources (images embedded, others as attachments), and
+    // persists the converted HTML. Shared by the single-.enex import and the backup restore
+    // flow — stripStyles=false for restore, since that content is UltraNote's own HTML (not
+    // Evernote's), and stripping its style/class attributes would drop colors/highlights/
+    // table sizing.
+    private async Task ImportNotesAsync(List<EnexNote> notes, Guid folderId, ImportState state, bool stripStyles = true)
+    {
+        foreach (var note in notes)
+        {
+            try
+            {
+                var created = await Api.CreateNoteAsync(new CreateNoteRequest(folderId, note.Title, "<p></p>"));
+
+                var hashToUrl = new Dictionary<string, string>();
+                foreach (var res in note.Resources)
+                {
+                    try
+                    {
+                        using var ms = new MemoryStream(res.Data);
+                        var dto = await Api.UploadAttachmentAsync(
+                            created.Id, res.FileName, res.Mime, ms,
+                            isEmbedded: res.Mime.StartsWith("image/"));
+                        if (dto.Id == Guid.Empty)
+                            throw new InvalidOperationException("resposta da API sem ID de anexo válido");
+                        hashToUrl[res.Hash] = Api.GetAttachmentUrl(dto.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        state.Errors.Add($"{note.Title} — anexo \"{res.FileName}\": {ex.Message}");
+                    }
+                }
+
+                var html = EnexImporter.ConvertEnml(note.RawEnml, hashToUrl, stripStyles);
+                await Api.UpdateNoteAsync(created.Id, new UpdateNoteRequest(note.Title, html, null));
+
+                state.Done++;
+            }
+            catch (Exception ex)
+            {
+                state.Failed++;
+                state.Errors.Add($"{note.Title}: {ex.Message}");
+            }
+            StateHasChanged();
+        }
+    }
+
+    // ---------- Backup restore ----------
+
+    private void OpenRestore() => _restore = new RestoreState();
+    private void CloseRestore() => _restore = null;
+
+    private async Task DoRestore(InputFileChangeEventArgs e)
+    {
+        if (_restore is null) return;
+        if (!Guid.TryParse(_restore.FolderIdStr, out var destFolderId))
+        {
+            _restore.Status = "Selecione uma pasta de destino.";
+            return;
+        }
+
+        // Read file BEFORE StateHasChanged — re-rendering invalidates the InputFile reference
+        using var buf = new MemoryStream();
+        try
+        {
+            await using var raw = e.File.OpenReadStream(maxAllowedSize: 500L * 1024 * 1024);
+            await raw.CopyToAsync(buf);
+        }
+        catch (Exception ex)
+        {
+            _restore.Status = $"Erro ao ler arquivo: {ex.Message}";
+            return;
+        }
+        buf.Position = 0;
+
+        _restore.Importing = true;
+        _restore.DoneFolders = 0;
+        _restore.Status = "";
+        StateHasChanged();
+
+        try
+        {
+            using var zip = new ZipArchive(buf, ZipArchiveMode.Read);
+            const string marker = "_notes.enex";
+            var entries = zip.Entries
+                .Where(en => en.FullName.EndsWith(marker, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(en => en.FullName.Count(c => c == '/'))
+                .ToList();
+
+            _restore.TotalFolders = entries.Count;
+            StateHasChanged();
+
+            var folderIdByPath = new Dictionary<string, Guid>(StringComparer.Ordinal);
+            var importState = new ImportState();
+
+            foreach (var entry in entries)
+            {
+                var dirPath = entry.FullName[..^marker.Length].TrimEnd('/');
+                var segments = dirPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+                var parentId = destFolderId;
+                var pathKey = "";
+                foreach (var seg in segments)
+                {
+                    pathKey = pathKey.Length == 0 ? seg : $"{pathKey}/{seg}";
+                    if (!folderIdByPath.TryGetValue(pathKey, out var fid))
+                    {
+                        var created = await Api.CreateFolderAsync(new CreateFolderRequest(parentId, seg));
+                        fid = created.Id;
+                        folderIdByPath[pathKey] = fid;
+                    }
+                    parentId = fid;
+                }
+
+                _restore.Status = $"Restaurando: {dirPath}";
+                StateHasChanged();
+
+                using var entryStream = entry.Open();
+                using var entryBuf = new MemoryStream();
+                await entryStream.CopyToAsync(entryBuf);
+                entryBuf.Position = 0;
+                var notes = EnexImporter.Parse(entryBuf);
+
+                await ImportNotesAsync(notes, parentId, importState, stripStyles: false);
+
+                _restore.DoneFolders++;
+                _restore.DoneNotes = importState.Done;
+                _restore.FailedNotes = importState.Failed;
+                _restore.Errors = importState.Errors;
+                StateHasChanged();
+            }
+
+            await LoadFolders();
+            await LoadNotes(destFolderId);
+            _restore.Status = _restore.FailedNotes == 0
+                ? $"{_restore.DoneNotes} nota(s) restaurada(s) em {_restore.DoneFolders} pasta(s)."
+                : $"{_restore.DoneNotes} restaurada(s), {_restore.FailedNotes} falha(s).";
+        }
+        catch (Exception ex)
+        {
+            _restore.Status = $"Erro ao restaurar: {ex.Message}";
+        }
+
+        _restore.Importing = false;
         StateHasChanged();
     }
 
@@ -1247,6 +1452,10 @@
         {
             try { await _sidebarResizeJs.InvokeVoidAsync("dispose", _resizeHandle); } catch (JSDisconnectedException) { }
             try { await _sidebarResizeJs.DisposeAsync(); } catch (JSDisconnectedException) { }
+        }
+        if (_downloadJs is not null)
+        {
+            try { await _downloadJs.DisposeAsync(); } catch (JSDisconnectedException) { }
         }
         _shortcutsRef?.Dispose();
     }

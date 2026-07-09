@@ -48,7 +48,11 @@ public static class EnexImporter
     }
 
     // Called after resources are uploaded; hashToUrl maps MD5 hex -> attachment URL.
-    public static string ConvertEnml(string enml, Dictionary<string, string> hashToUrl)
+    // stripStyles: strip inline style/class attributes, which are Evernote's own styling
+    // and clash with the app's CSS. Pass false when re-importing content that UltraNote
+    // itself exported (BackupExporter) — that HTML already uses the app's own styling
+    // (colors, highlights, table sizing) and should survive the round trip untouched.
+    public static string ConvertEnml(string enml, Dictionary<string, string> hashToUrl, bool stripStyles = true)
     {
         var start = enml.IndexOf("<en-note", StringComparison.OrdinalIgnoreCase);
         if (start < 0) return "<p></p>";
@@ -57,10 +61,13 @@ public static class EnexImporter
         var end = enml.LastIndexOf("</en-note>", StringComparison.OrdinalIgnoreCase);
         var inner = end > tagEnd ? enml[(tagEnd + 1)..end] : enml[(tagEnd + 1)..];
 
-        // Strip Evernote inline styles and classes (incompatible with app styling)
-        inner = Regex.Replace(inner, @"\s+style=""[^""]*""", "", RegexOptions.IgnoreCase);
-        inner = Regex.Replace(inner, @"\s+style='[^']*'", "", RegexOptions.IgnoreCase);
-        inner = Regex.Replace(inner, @"\s+class=""[^""]*""", "", RegexOptions.IgnoreCase);
+        if (stripStyles)
+        {
+            // Strip Evernote inline styles and classes (incompatible with app styling)
+            inner = Regex.Replace(inner, @"\s+style=""[^""]*""", "", RegexOptions.IgnoreCase);
+            inner = Regex.Replace(inner, @"\s+style='[^']*'", "", RegexOptions.IgnoreCase);
+            inner = Regex.Replace(inner, @"\s+class=""[^""]*""", "", RegexOptions.IgnoreCase);
+        }
 
         // <en-media hash="..." type="..."/> → <img> for images, <a> for files
         inner = Regex.Replace(inner, @"<en-media\b([^>]*?)/>",
@@ -112,7 +119,7 @@ public static class EnexImporter
         0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391,
     };
 
-    private static string Md5Hex(byte[] data)
+    internal static string Md5Hex(byte[] data)
     {
         long L = data.Length;
         int zeros = (int)((56 - (L + 1) % 64 + 64) % 64);

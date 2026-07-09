@@ -102,6 +102,9 @@ public class UltraNoteApiClient(HttpClient http) : IUltraNoteApi
     public async Task DeleteAttachmentAsync(Guid id, CancellationToken ct = default) =>
         (await http.DeleteAsync($"api/attachments/{id}", ct)).EnsureSuccessStatusCode();
 
+    public async Task<byte[]> DownloadAttachmentBytesAsync(Guid attachmentId, CancellationToken ct = default) =>
+        await http.GetByteArrayAsync($"api/attachments/{attachmentId}", ct);
+
     public string GetAttachmentUrl(Guid attachmentId)
     {
         var baseUri = http.BaseAddress is null ? "" : http.BaseAddress.ToString().TrimEnd('/');
