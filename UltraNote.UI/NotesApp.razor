@@ -63,6 +63,18 @@
                         <i class="ti ti-star" aria-hidden="true"></i>
                     </button>
                 }
+                @if (_showArchived)
+                {
+                    <button class="icon-btn active" title="Ocultar arquivadas" @onclick="ToggleShowArchived">
+                        <i class="ti ti-archive" aria-hidden="true"></i>
+                    </button>
+                }
+                else
+                {
+                    <button class="icon-btn" title="@($"Exibir arquivadas ({_archivedCount})")" @onclick="ToggleShowArchived">
+                        <i class="ti ti-archive-off" aria-hidden="true"></i>
+                    </button>
+                }
                 <button class="icon-btn push-right" title="Ferramentas" @onclick="OpenToolsMenu"><i class="ti ti-dots-vertical" aria-hidden="true"></i></button>
             </div>
             <div class="sidebar-content">
@@ -73,22 +85,23 @@
                         <div class="tree-row fav-root-row">
                             <svg class="star-filled-svg fav-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.243 7.34l-6.38.925-.113.023a1 1 0 0 0-.44 1.684l4.622 4.499-1.09 6.355-.013.11a1 1 0 0 0 1.464.944l5.706-3 5.693 3 .1.046a1 1 0 0 0 1.352-1.1l-1.091-6.355 4.624-4.5.078-.085a1 1 0 0 0-.633-1.62l-6.38-.926-2.852-5.78a1 1 0 0 0-1.794 0l-2.853 5.78z"/></svg>
                             <span class="tree-label">Favoritos</span>
-                            @if (_favorites.Count > 0) { <span class="fav-badge">@_favorites.Count</span> }
+                            @if (VisibleFavorites.Count > 0) { <span class="fav-badge">@VisibleFavorites.Count</span> }
                         </div>
-                        @if (_favorites.Count == 0)
+                        @if (VisibleFavorites.Count == 0)
                         {
                             <p class="empty fav-empty">Nenhum favorito ainda.</p>
                         }
                         else
                         {
-                            @foreach (var fav in _favorites)
+                            @foreach (var fav in VisibleFavorites)
                             {
-                                <div class="tree-note fav-note @(fav.Id == SelectedNoteId ? "active" : "")"
+                                <div class="tree-note fav-note @(fav.Id == SelectedNoteId ? "active" : "") @(fav.IsArchived ? "archived-note" : "")"
                                      @onclick="() => RequestSelectNote(fav.Id)"
                                      @oncontextmenu:preventDefault="true"
                                      @oncontextmenu="(e) => OpenNoteMenu(fav, e)">
                                     <i class="ti ti-file-text note-ico" aria-hidden="true"></i>
                                     <span class="tree-label">@fav.Title</span>
+                                    @if (fav.IsArchived) { <i class="ti ti-archive note-archive-ico" aria-hidden="true"></i> }
                                 </div>
                             }
                         }
@@ -113,12 +126,13 @@
                 {
                     @foreach (var n in _searchResults)
                     {
-                        <div class="tree-note @(n.Id == SelectedNoteId ? "active" : "")"
+                        <div class="tree-note @(n.Id == SelectedNoteId ? "active" : "") @(n.IsArchived ? "archived-note" : "")"
                              @onclick="() => RequestSelectNote(n.Id)"
                              @oncontextmenu:preventDefault="true"
                              @oncontextmenu="(e) => OpenNoteMenu(n, e)">
                             <i class="ti ti-file-text note-ico" aria-hidden="true"></i>
                             <span class="tree-label">@n.Title</span>
+                            @if (n.IsArchived) { <i class="ti ti-archive note-archive-ico" aria-hidden="true"></i> }
                             <span class="result-folder">@(FolderById(n.FolderId)?.Name)</span>
                         </div>
                     }
@@ -149,6 +163,9 @@
                             <i class="ti ti-star" aria-hidden="true"></i>
                         </button>
                     }
+                    <button class="icon-btn archive-btn @(_selectedNote.IsArchived ? "active" : "")" title="@(_selectedNote.IsArchived ? "Desarquivar" : "Arquivar")" @onclick="ToggleArchiveCurrentNote">
+                        <i class="ti @(_selectedNote.IsArchived ? "ti-archive-off" : "ti-archive")" aria-hidden="true"></i>
+                    </button>
                     <button class="btn-accent" @onclick="SaveNote" disabled="@_saving">@(_saving ? "Salvando…" : _dirty ? "Salvar *" : "Salvar")</button>
                 </div>
                 <div class="editor-meta">@_meta</div>
@@ -252,6 +269,10 @@
                 <button @onclick="() => ToggleFavorite(_ctx.Note!)">
                     <i class="ti @(_ctx.Note!.IsFavorite ? "ti-star-off" : "ti-star")" aria-hidden="true"></i>
                     @(_ctx.Note!.IsFavorite ? "Desfavoritar" : "Favoritar")
+                </button>
+                <button @onclick="() => ToggleArchive(_ctx.Note!)">
+                    <i class="ti @(_ctx.Note!.IsArchived ? "ti-archive-off" : "ti-archive")" aria-hidden="true"></i>
+                    @(_ctx.Note!.IsArchived ? "Desarquivar" : "Arquivar")
                 </button>
                 <hr />
                 <button @onclick="() => RenameNote(_ctx.Note!)"><i class="ti ti-pencil" aria-hidden="true"></i>Renomear</button>
@@ -489,6 +510,11 @@
 
     private List<NoteSummaryDto> _favorites = new();
     private bool _favoritesVisible = true;
+    private List<NoteSummaryDto> VisibleFavorites =>
+        _showArchived ? _favorites : _favorites.Where(f => !f.IsArchived).ToList();
+
+    private bool _showArchived;
+    private int _archivedCount;
 
     private CtxMenu? _ctx;
     private Func<Task>? _pendingAction;
@@ -514,11 +540,13 @@
     public Guid? SelectedNoteId => _selectedNote?.Id;
     public Guid? SelectedFolderId => _selectedFolderId;
     public bool TreeSelectionIsNote => _treeSelectionIsNote;
+    public bool ShowArchived => _showArchived;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadFolders();
         await LoadFavorites();
+        await LoadArchivedCount();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -540,6 +568,8 @@
                 await SelectNoteNow(restoredNoteId);
             var savedFavVisible = await JS.InvokeAsync<string?>("localStorage.getItem", "ultranote_favorites_visible");
             if (savedFavVisible is not null) _favoritesVisible = savedFavVisible == "true";
+            var savedShowArchived = await JS.InvokeAsync<string?>("localStorage.getItem", "ultranote_show_archived");
+            if (savedShowArchived is not null) _showArchived = savedShowArchived == "true";
             StateHasChanged();
         }
 
@@ -617,6 +647,18 @@
         await JS.InvokeVoidAsync("localStorage.setItem", "ultranote_favorites_visible", _favoritesVisible ? "true" : "false");
     }
 
+    private async Task LoadArchivedCount()
+    {
+        try { _archivedCount = await Api.GetArchivedCountAsync(); }
+        catch { _archivedCount = 0; }
+    }
+
+    private async Task ToggleShowArchived()
+    {
+        _showArchived = !_showArchived;
+        await JS.InvokeVoidAsync("localStorage.setItem", "ultranote_show_archived", _showArchived ? "true" : "false");
+    }
+
     public async Task ToggleFavorite(NoteSummaryDto note)
     {
         CloseMenus();
@@ -654,7 +696,44 @@
         // Fallback: constrói summary a partir da nota aberta
         return ToggleFavorite(new NoteSummaryDto(
             _selectedNote.Id, _selectedNote.FolderId, _selectedNote.Title,
-            _selectedNote.UpdatedAt, _selectedNote.IsFavorite));
+            _selectedNote.UpdatedAt, _selectedNote.IsFavorite, _selectedNote.IsArchived));
+    }
+
+    public async Task ToggleArchive(NoteSummaryDto note)
+    {
+        CloseMenus();
+        var newVal = !note.IsArchived;
+        try
+        {
+            await Api.UpdateNoteAsync(note.Id, new UpdateNoteRequest(null, null, null, IsArchived: newVal));
+            if (_notes.TryGetValue(note.FolderId, out var list))
+            {
+                var idx = list.FindIndex(n => n.Id == note.Id);
+                if (idx >= 0) list[idx] = list[idx] with { IsArchived = newVal };
+            }
+            var sri = _searchResults.FindIndex(n => n.Id == note.Id);
+            if (sri >= 0) _searchResults[sri] = _searchResults[sri] with { IsArchived = newVal };
+            if (_selectedNote?.Id == note.Id)
+                _selectedNote = _selectedNote with { IsArchived = newVal };
+            var favIdx = _favorites.FindIndex(n => n.Id == note.Id);
+            if (favIdx >= 0) _favorites[favIdx] = _favorites[favIdx] with { IsArchived = newVal };
+            await LoadArchivedCount();
+            StateHasChanged();
+        }
+        catch (Exception ex) { _status = $"Erro: {ex.Message}"; }
+    }
+
+    private Task ToggleArchiveCurrentNote()
+    {
+        if (_selectedNote is null) return Task.CompletedTask;
+        if (_notes.TryGetValue(_selectedNote.FolderId, out var list))
+        {
+            var s = list.FirstOrDefault(n => n.Id == _selectedNote.Id);
+            if (s is not null) return ToggleArchive(s);
+        }
+        return ToggleArchive(new NoteSummaryDto(
+            _selectedNote.Id, _selectedNote.FolderId, _selectedNote.Title,
+            _selectedNote.UpdatedAt, _selectedNote.IsFavorite, _selectedNote.IsArchived));
     }
 
     // ---------- Selection ----------
@@ -811,7 +890,12 @@
     private async Task DeleteFolder(FolderDto folder)
     {
         CloseMenus();
-        if (!await Confirm($"Excluir a pasta \"{folder.Name}\" e todo o conteúdo?")) return;
+        var archivedCount = 0;
+        try { archivedCount = await Api.GetFolderArchivedCountAsync(folder.Id); } catch { }
+        var message = archivedCount > 0
+            ? $"Excluir a pasta \"{folder.Name}\" e todo o conteúdo? Isso inclui {archivedCount} nota(s) arquivada(s)."
+            : $"Excluir a pasta \"{folder.Name}\" e todo o conteúdo?";
+        if (!await Confirm(message)) return;
         try
         {
             await Api.DeleteFolderAsync(folder.Id);
@@ -819,6 +903,7 @@
             _expanded.Remove(folder.Id);
             if (_selectedNote is not null && IsUnder(_selectedNote.FolderId, folder)) await ClearEditor();
             await LoadFolders();
+            if (archivedCount > 0) { await LoadArchivedCount(); await LoadFavorites(); }
             if (_selectedFolderId.HasValue && FolderById(_selectedFolderId.Value) is null)
             {
                 _selectedFolderId = null;
@@ -947,6 +1032,7 @@
         var q = _query.Trim();
         _searchResults = _notes.Values.SelectMany(x => x)
             .Where(n => n.Title.Contains(q, StringComparison.OrdinalIgnoreCase))
+            .Where(n => _showArchived || !n.IsArchived)
             .OrderBy(n => n.Title)
             .ToList();
     }

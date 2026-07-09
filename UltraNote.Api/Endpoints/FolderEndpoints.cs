@@ -34,9 +34,23 @@ public static class FolderEndpoints
             var notes = await db.Notes
                 .Where(n => n.FolderId == id)
                 .OrderBy(n => n.Title)
-                .Select(n => new NoteSummaryDto(n.Id, n.FolderId, n.Title, n.UpdatedAt, n.IsFavorite))
+                .Select(n => new NoteSummaryDto(n.Id, n.FolderId, n.Title, n.UpdatedAt, n.IsFavorite, n.IsArchived))
                 .ToListAsync();
             return Results.Ok(notes);
+        });
+
+        // Count of archived notes in this folder and all its descendants — used to warn
+        // before deleting a folder (cascade delete would silently take them too).
+        g.MapGet("/{id:guid}/archived-count", async (Guid id, AppDbContext db) =>
+        {
+            var folder = await db.Folders.FindAsync(id);
+            if (folder is null) return Results.NotFound();
+
+            var count = await db.Notes
+                .Where(n => n.IsArchived)
+                .Where(n => n.Folder!.Path == folder.Path || n.Folder!.Path.StartsWith(folder.Path + "/"))
+                .CountAsync();
+            return Results.Ok(new { count });
         });
 
         g.MapPost("/", async (CreateFolderRequest req, AppDbContext db) =>

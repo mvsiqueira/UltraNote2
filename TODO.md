@@ -37,6 +37,8 @@ Backlog de evolução. Marque `[x]` ao concluir. Prioridade sugerida de cima par
   - [x] Erros de upload de anexo durante a importação (rede, resposta inválida da API) agora aparecem na tela em vez de falhar silenciosamente — antes um anexo que falhasse virava um link quebrado sem nenhum aviso.
   - [x] **Causa raiz do "anexo não vem" em produção**: `GET /api/attachments/{id}` exigia login, mas o link é acessado pelo navegador como requisição crua (sem o Bearer token) — sempre dava 401. Só reproduzia em produção (dev roda sem auth). Corrigido com cookie de sessão (ver item em "Autenticação / sessão").
 - [x] **Notas favoritas** — seção "Favoritos" na barra lateral (mostrar/ocultar via toolbar, estado persistido em localStorage), toggle por estrela no cabeçalho do editor e no menu de contexto, indicador na árvore.
+- [x] **Notas arquivadas** — nota fica no lugar (mesma pasta), mas oculta por padrão; toggle "Exibir arquivadas" na toolbar (persistido em localStorage) revela tudo de uma vez, com indicador visual e nota meio apagada. "Arquivar/Desarquivar" no menu de contexto e no cabeçalho do editor. Busca também ignora arquivadas por padrão. Excluir uma pasta com notas arquivadas dentro mostra aviso específico (`GET /api/folders/{id}/archived-count`, recursivo).
+- [x] **Backup / restaurar biblioteca** — menu de contexto de pasta ganhou "Exportar pasta (.zip)"; Ferramentas ganhou "Exportar backup completo (.zip)" e "Importar backup (.zip)". Cada pasta vira um `.enex` dentro do zip (caminho espelha a árvore, `Viagens/Roteiros/_notes.enex`), anexos embutidos como recursos binários. Restore recria a árvore de pastas e reimporta as notas preservando cor/realce/tamanho de tabela (ao contrário do import de `.enex` do Evernote real, que descarta esses estilos de propósito).
 
 ## 3. UX e robustez
 
@@ -47,6 +49,7 @@ Backlog de evolução. Marque `[x]` ao concluir. Prioridade sugerida de cima par
 - [ ] **Adaptar para mobile** — layout responsivo: sidebar recolhível, toolbar do editor adaptada para toque, área de edição ocupa tela cheia.
 - [x] **Barra de ferramentas acima da árvore** — ações rápidas (nova pasta, nova nota, recolher tudo, expandir tudo) + nó raiz "Notas" para criação de pastas na raiz.
 - [x] **Tela de About** — versão do app, créditos, links (GitHub, etc.).
+- [x] **Redimensionar a barra lateral** — arrastar a borda entre a sidebar e o editor (180–480px), estado persistido em localStorage, sem round-trip pro Blazor (JS puro).
 
 ## 3b. Multiusuário (segregação de dados)
 
@@ -62,7 +65,8 @@ Backlog de evolução. Marque `[x]` ao concluir. Prioridade sugerida de cima par
 ## 4. Autenticação / sessão
 
 - [x] **Persistir / renovar o token** Google na web — token em localStorage (sobrevive a refresh) + auto-select silencioso renovando antes de expirar.
-- [x] Restringir **CORS** da API para `https://note.ultrasoft.app.br` em produção (`Cors:AllowedOrigins`, `AllowCredentials`); dev sem origens configuradas continua permissivo.
+- [x] Restringir **CORS** da API para os domínios de produção (`https://note.ultrasoft.app.br` e `https://note.ultrasoftinc.com.br`, `Cors:AllowedOrigins`, `AllowCredentials`); dev sem origens configuradas continua permissivo.
+- [x] **Bloquear login de contas fora da allowlist** — antes, qualquer conta Google válida entrava na UI (só as chamadas de API voltavam vazias/com erro). Agora `POST /api/auth/session` é checado *antes* de liberar acesso; conta não-autorizada cai numa tela de "sem acesso" em vez de ver o app. Corrigido também um bug relacionado: falha transitória (rede/CORS) na verificação só é tolerada se for renovação da *mesma* conta já logada — trocar de conta durante uma falha não deixa mais entrar sem checar o e-mail da conta nova.
 - [x] **Cookie de sessão para anexos** — `<img src>`/`<a href>` embutidos na nota não carregam o Bearer token (requisição crua do navegador). `POST /api/auth/session` (chamado a cada login/renovação de token) planta um cookie `HttpOnly; Secure; SameSite=Lax` (esquema `AttachmentCookie`, expira em 24h com renovação deslizante) que a API aceita como alternativa ao Bearer em qualquer endpoint. Revogável trocando a chave de Data Protection — ao contrário do GUID público que era usado antes.
 - [ ] (Opcional) **Cloudflare Access** como camada extra na URL da web.
 

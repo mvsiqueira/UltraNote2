@@ -83,7 +83,7 @@ produz hoje), guardado numa coluna.
 
 ```
 Folder(Id, ParentId, Name, Path, CreatedAt, UpdatedAt)
-Note(Id, FolderId, Title, ContentHtml, CreatedAt, UpdatedAt, IsFavorite)
+Note(Id, FolderId, Title, ContentHtml, CreatedAt, UpdatedAt, IsFavorite, IsArchived)
 Attachment(Id, NoteId, FileName, ContentType, StoragePath, CreatedAt)
 ```
 
@@ -99,17 +99,19 @@ Attachment(Id, NoteId, FileName, ContentType, StoragePath, CreatedAt)
 Espelha os comandos que o app já tem hoje.
 
 ```
-GET    /api/folders                 → árvore de pastas
-POST   /api/folders                 → cria
-PUT    /api/folders/{id}            → renomeia/move
-DELETE /api/folders/{id}            → exclui (com filhos)
-GET    /api/folders/{id}/notes      → notas da pasta
-GET    /api/notes/{id}              → nota + conteúdo
-GET    /api/notes/favorites         → notas favoritadas
-POST   /api/notes                   → cria
-PUT    /api/notes/{id}              → salva
+GET    /api/folders                     → árvore de pastas
+POST   /api/folders                     → cria
+PUT    /api/folders/{id}                → renomeia/move
+DELETE /api/folders/{id}                → exclui (com filhos)
+GET    /api/folders/{id}/notes          → notas da pasta
+GET    /api/folders/{id}/archived-count → notas arquivadas na pasta + descendentes (aviso pré-exclusão)
+GET    /api/notes/{id}                  → nota + conteúdo
+GET    /api/notes/favorites             → notas favoritadas
+GET    /api/notes/archived-count        → total de notas arquivadas na biblioteca
+POST   /api/notes                       → cria
+PUT    /api/notes/{id}                  → salva
 DELETE /api/notes/{id}
-POST   /api/notes/{id}/attachments  → upload de imagem/anexo
+POST   /api/notes/{id}/attachments      → upload de imagem/anexo
 ```
 
 Todos exigem `Authorization: Bearer <token Google>` **ou** o cookie de sessão

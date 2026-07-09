@@ -24,6 +24,14 @@ public class UltraNoteApiClient(HttpClient http) : IUltraNoteApi
     public async Task<IReadOnlyList<NoteSummaryDto>> GetFavoritesAsync(CancellationToken ct = default) =>
         await http.GetFromJsonAsync<List<NoteSummaryDto>>("api/notes/favorites", ct) ?? [];
 
+    public async Task<int> GetArchivedCountAsync(CancellationToken ct = default) =>
+        (await http.GetFromJsonAsync<CountResponse>("api/notes/archived-count", ct))?.Count ?? 0;
+
+    public async Task<int> GetFolderArchivedCountAsync(Guid folderId, CancellationToken ct = default) =>
+        (await http.GetFromJsonAsync<CountResponse>($"api/folders/{folderId}/archived-count", ct))?.Count ?? 0;
+
+    private record CountResponse(int Count);
+
     public async Task<FolderDto> CreateFolderAsync(CreateFolderRequest req, CancellationToken ct = default)
     {
         var res = await http.PostAsJsonAsync("api/folders", req, ct);

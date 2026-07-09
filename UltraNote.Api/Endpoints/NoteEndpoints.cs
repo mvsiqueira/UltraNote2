@@ -16,9 +16,15 @@ public static class NoteEndpoints
             var notes = await db.Notes
                 .Where(n => n.IsFavorite)
                 .OrderBy(n => n.Title)
-                .Select(n => new NoteSummaryDto(n.Id, n.FolderId, n.Title, n.UpdatedAt, n.IsFavorite))
+                .Select(n => new NoteSummaryDto(n.Id, n.FolderId, n.Title, n.UpdatedAt, n.IsFavorite, n.IsArchived))
                 .ToListAsync();
             return Results.Ok(notes);
+        });
+
+        g.MapGet("/archived-count", async (AppDbContext db) =>
+        {
+            var count = await db.Notes.CountAsync(n => n.IsArchived);
+            return Results.Ok(new { count });
         });
 
         g.MapGet("/{id:guid}", async (Guid id, AppDbContext db) =>
@@ -62,6 +68,8 @@ public static class NoteEndpoints
                 note.ContentHtml = req.ContentHtml;
             if (req.IsFavorite is { } fav)
                 note.IsFavorite = fav;
+            if (req.IsArchived is { } arch)
+                note.IsArchived = arch;
 
             note.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
@@ -81,5 +89,5 @@ public static class NoteEndpoints
     }
 
     private static NoteDto ToDto(Note n) =>
-        new(n.Id, n.FolderId, n.Title, n.ContentHtml, n.CreatedAt, n.UpdatedAt, n.IsFavorite);
+        new(n.Id, n.FolderId, n.Title, n.ContentHtml, n.CreatedAt, n.UpdatedAt, n.IsFavorite, n.IsArchived);
 }

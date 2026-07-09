@@ -21,9 +21,9 @@
     {
         @* Notes have no chevron, so +20 (chevron width 14px + row gap 6px) keeps their
            icon aligned with where a child folder's icon would sit at the same depth. *@
-        @foreach (var note in notes)
+        @foreach (var note in notes.Where(n => Owner.ShowArchived || !n.IsArchived))
         {
-            <div class="tree-note @(note.Id == Owner.SelectedNoteId ? "active" : "")"
+            <div class="tree-note @(note.Id == Owner.SelectedNoteId ? "active" : "") @(note.IsArchived ? "archived-note" : "")"
                  style="padding-left:@(8 + (Depth + 1) * 15 + 20)px"
                  @onclick="() => Owner.RequestSelectNote(note.Id)"
                  @oncontextmenu:preventDefault="true"
@@ -31,6 +31,7 @@
                 <i class="ti ti-file-text note-ico" aria-hidden="true"></i>
                 <span class="tree-label">@note.Title</span>
                 @if (note.IsFavorite) { <svg class="star-filled-svg note-fav-star" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.243 7.34l-6.38.925-.113.023a1 1 0 0 0-.44 1.684l4.622 4.499-1.09 6.355-.013.11a1 1 0 0 0 1.464.944l5.706-3 5.693 3 .1.046a1 1 0 0 0 1.352-1.1l-1.091-6.355 4.624-4.5.078-.085a1 1 0 0 0-.633-1.62l-6.38-.926-2.852-5.78a1 1 0 0 0-1.794 0l-2.853 5.78z"/></svg> }
+                @if (note.IsArchived) { <i class="ti ti-archive note-archive-ico" aria-hidden="true"></i> }
             </div>
         }
     }
