@@ -9,9 +9,18 @@ mesmo `cloudflared`. Mexer/recriar um app **não derruba os outros**.
 cloudflared   app-teste     app-note-api      app-note-web
  (app 1)       (app 2)       (───── app 3: ultranote ─────)
 
-  note.ultrasoft.app.br     → http://app-note-web:8080
-  note-api.ultrasoft.app.br → http://app-note-api:8080
+  note.ultrasoft.app.br         → http://app-note-web:8080
+  note-api.ultrasoft.app.br     → http://app-note-api:8080
+  note.ultrasoftinc.com.br      → http://app-note-web:8080
+  note-api.ultrasoftinc.com.br  → http://app-note-api:8080
 ```
+
+> **Dois domínios de produção** (`ultrasoft.app.br` e `ultrasoftinc.com.br`), cada um com sua
+> própria rota `note`/`note-api`. Isso importa pro cookie de sessão dos anexos
+> (`SameSite=Lax`, ver §7 do ARCHITECTURE.md): o app detecta o domínio de onde foi carregado e
+> chama a API no `note-api.<mesmo domínio>` — se um dos dois não tiver a rota `note-api`
+> configurada, os anexos daquele domínio ficam quebrados (a API "some" mesmo a web
+> funcionando).
 
 ## ⚠️ Particularidade deste NAS: build não tem internet
 
@@ -30,7 +39,7 @@ rodamos as **imagens oficiais** `aspnet`/`nginx` montando os arquivos publicados
    `negrume@gmail.com` em *Test users*).
 2. **Credenciais → ID do cliente OAuth → Aplicativo da Web**.
 3. **Origens JavaScript autorizadas**: `https://note.ultrasoft.app.br`,
-   `http://localhost:5200`, `http://127.0.0.1:5200`.
+   `https://note.ultrasoftinc.com.br`, `http://localhost:5200`, `http://127.0.0.1:5200`.
 4. Copie o **Client ID** (o *secret* não é usado).
 
 ## 2. Configurar a web
@@ -42,6 +51,11 @@ rodamos as **imagens oficiais** `aspnet`/`nginx` montando os arquivos publicados
   "GoogleClientId": "SEU_CLIENT_ID.apps.googleusercontent.com"
 }
 ```
+
+`ApiBaseUrl` só é usado como *fallback* (dev local, ou se o host não bater com o padrão
+`note.<domínio>`) — em produção, o app deriva o endereço da API a partir do próprio host da
+página (`note.X` → `note-api.X`), pra sempre chamar a API no mesmo domínio de onde foi
+carregado (ver nota sobre `SameSite=Lax` acima).
 
 ## 3. Código + volumes no NAS
 
@@ -86,12 +100,15 @@ Aplicações → **Criar**, colando o YAML. Ordem (o `cloudflared` cria a rede `
 
 ## 6. Rotas Cloudflare
 
-Túnel `qnap` → Routes → Add route:
+Túnel `qnap` → Routes → Add route (uma entrada por domínio completo, repetir pra cada domínio
+de produção):
 
-| Subdomain | Service URL |
-|-----------|-------------|
-| `note` | `http://app-note-web:8080` |
-| `note-api` | `http://app-note-api:8080` |
+| Hostname | Service URL |
+|----------|-------------|
+| `note.ultrasoft.app.br` | `http://app-note-web:8080` |
+| `note-api.ultrasoft.app.br` | `http://app-note-api:8080` |
+| `note.ultrasoftinc.com.br` | `http://app-note-web:8080` |
+| `note-api.ultrasoftinc.com.br` | `http://app-note-api:8080` |
 
 ## 7. Verificar
 
