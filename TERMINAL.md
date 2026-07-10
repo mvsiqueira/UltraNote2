@@ -2,12 +2,26 @@
 
 Lista de comandos de terminal, úteis para o desenvolvimento do app
 
-## Publicar container docker
+## Publicar container docker WEB
 ```
 docker run --rm --network edge --dns 8.8.8.8 \
   -v /share/Container/ultranote-app:/src -w /src \
   mcr.microsoft.com/dotnet/sdk:10.0 \
   dotnet publish UltraNote.Web/UltraNote.Web.csproj -c Release -o /src/_out_web
+```
+```
+. /share/Container/publish-ultranote-web.sh
+```
+
+## Publicar container docker API
+```
+docker run --rm --network edge --dns 8.8.8.8 \
+  -v /share/Container/ultranote-app:/src -w /src \
+  mcr.microsoft.com/dotnet/sdk:10.0 \
+  dotnet publish UltraNote.Api/UltraNote.Api.csproj -c Release -o /src/_out_api
+```
+```
+. /share/Container/publish-ultranote-api.sh
 ```
 
 ## Iniciar servidor API

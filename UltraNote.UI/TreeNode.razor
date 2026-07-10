@@ -1,6 +1,12 @@
 ﻿@* Recursive tree node: a folder row, then (when expanded) its subfolders and its notes. *@
 
-<div class="tree-row @(Owner.SelectedFolderId == Folder.Id && !Owner.TreeSelectionIsNote ? "active" : "")" style="padding-left:@(8 + Depth * 15)px"
+<div class="tree-row @(Owner.SelectedFolderId == Folder.Id && !Owner.TreeSelectionIsNote ? "active" : "") @(Owner.IsDragOver(Folder.Id) ? "drag-over" : "")" style="padding-left:@(8 + Depth * 15)px"
+     draggable="true"
+     @ondragstart="() => Owner.StartDragFolder(Folder)"
+     @ondragover:preventDefault="true"
+     @ondragenter="() => Owner.DragEnterFolder(Folder.Id)"
+     @ondragleave="() => Owner.DragLeaveFolder(Folder.Id)"
+     @ondrop="() => Owner.DropOnFolder(Folder.Id)"
      @onclick="() => Owner.SelectFolder(Folder)"
      @oncontextmenu:preventDefault="true"
      @oncontextmenu="(e) => Owner.OpenFolderMenu(Folder, e)">
@@ -25,6 +31,8 @@
         {
             <div class="tree-note @(note.Id == Owner.SelectedNoteId ? "active" : "") @(note.IsArchived ? "archived-note" : "")"
                  style="padding-left:@(8 + (Depth + 1) * 15 + 20)px"
+                 draggable="true"
+                 @ondragstart="() => Owner.StartDragNote(note)"
                  @onclick="() => Owner.RequestSelectNote(note.Id)"
                  @oncontextmenu:preventDefault="true"
                  @oncontextmenu="(e) => Owner.OpenNoteMenu(note, e)">

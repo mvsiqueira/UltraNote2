@@ -51,6 +51,7 @@
                 <div class="toolbar-sep"></div>
                 <button class="icon-btn" title="Recolher tudo" @onclick="CollapseAll"><i class="ti ti-chevrons-left" aria-hidden="true"></i></button>
                 <button class="icon-btn" title="Expandir tudo" @onclick="ToolbarExpandAll"><i class="ti ti-chevrons-right" aria-hidden="true"></i></button>
+                <div class="toolbar-sep"></div>
                 @if (_favoritesVisible)
                 {
                     <button class="icon-btn active" title="Ocultar favoritos" @onclick="ToggleFavoritesVisible">
@@ -96,6 +97,8 @@
                             @foreach (var fav in VisibleFavorites)
                             {
                                 <div class="tree-note fav-note @(fav.Id == SelectedNoteId ? "active" : "") @(fav.IsArchived ? "archived-note" : "")"
+                                     draggable="true"
+                                     @ondragstart="() => StartDragNote(fav)"
                                      @onclick="() => RequestSelectNote(fav.Id)"
                                      @oncontextmenu:preventDefault="true"
                                      @oncontextmenu="(e) => OpenNoteMenu(fav, e)">
@@ -107,7 +110,12 @@
                         }
                         <div class="sidebar-sep"></div>
                     }
-                    <div class="tree-row tree-root @(_selectedFolderId is null ? "active" : "")" @onclick="SelectRoot">
+                    <div class="tree-row tree-root @(_selectedFolderId is null ? "active" : "") @(_dragOverRoot ? "drag-over" : "")"
+                         @ondragover:preventDefault="true"
+                         @ondragenter="() => _dragOverRoot = true"
+                         @ondragleave="() => _dragOverRoot = false"
+                         @ondrop="DropOnRoot"
+                         @onclick="SelectRoot">
                         <i class="ti ti-notebook folder-ico" aria-hidden="true"></i>
                         <span class="tree-label">Notas</span>
                     </div>
@@ -599,6 +607,57 @@
     {
         if (!_expanded.Add(folder.Id)) { _expanded.Remove(folder.Id); StateHasChanged(); return; }
         if (!_notes.ContainsKey(folder.Id)) await LoadNotes(folder.Id);
+        StateHasChanged();
+    }
+
+    // ---------- Drag and drop (move via dragging onto a folder / the root row) ----------
+    private object? _dragging; // FolderDto or NoteSummaryDto currently being dragged
+    private Guid? _dragOverFolderId;
+    private bool _dragOverRoot;
+
+    public void StartDragFolder(FolderDto folder) => _dragging = folder;
+    public void StartDragNote(NoteSummaryDto note) => _dragging = note;
+    public bool IsDragOver(Guid folderId) => _dragOverFolderId == folderId;
+    public void DragEnterFolder(Guid folderId) => _dragOverFolderId = folderId;
+    public void DragLeaveFolder(Guid folderId) { if (_dragOverFolderId == folderId) _dragOverFolderId = null; }
+
+    public async Task DropOnFolder(Guid targetFolderId)
+    {
+        _dragOverFolderId = null;
+        var dragging = _dragging;
+        _dragging = null;
+        switch (dragging)
+        {
+            case FolderDto df when df.Id != targetFolderId:
+                _move = new MoveCtx(df, null);
+                _moveDestinationValue = targetFolderId.ToString();
+                await ConfirmMove();
+                break;
+            case NoteSummaryDto dn:
+                _move = new MoveCtx(null, dn);
+                _moveDestinationValue = targetFolderId.ToString();
+                await ConfirmMove();
+                break;
+        }
+        // The drop lands on a *child* TreeNode's event handler, so Blazor only
+        // auto-rerenders that instance — force a rerender from the root so every
+        // TreeNode (including the note/folder's OLD location, a sibling instance)
+        // picks up the change instead of looking stale until clicked.
+        StateHasChanged();
+    }
+
+    private async Task DropOnRoot()
+    {
+        _dragOverRoot = false;
+        var dragging = _dragging;
+        _dragging = null;
+        // Notes always need a folder — dropping one on the root row is a no-op.
+        if (dragging is FolderDto df)
+        {
+            _move = new MoveCtx(df, null);
+            _moveDestinationValue = RootSentinel;
+            await ConfirmMove();
+        }
         StateHasChanged();
     }
 
