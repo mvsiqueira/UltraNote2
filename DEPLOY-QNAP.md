@@ -39,7 +39,8 @@ rodamos as **imagens oficiais** `aspnet`/`nginx` montando os arquivos publicados
    `negrume@gmail.com` em *Test users*).
 2. **Credenciais → ID do cliente OAuth → Aplicativo da Web**.
 3. **Origens JavaScript autorizadas**: `https://note.ultrasoft.app.br`,
-   `https://note.ultrasoftinc.com.br`, `http://localhost:5200`, `http://127.0.0.1:5200`.
+   `https://note.ultrasoftinc.com.br`, `https://groo.myqnapcloud.com:8443`,
+   `http://localhost:5200`, `http://127.0.0.1:5200`.
 4. Copie o **Client ID** (o *secret* não é usado).
 
 ## 2. Configurar a web
@@ -110,11 +111,33 @@ de produção):
 | `note.ultrasoftinc.com.br` | `http://app-note-web:8080` |
 | `note-api.ultrasoftinc.com.br` | `http://app-note-api:8080` |
 
-## 7. Verificar
+## 7. Acesso alternativo via myQNAPcloud (opcional)
+
+Útil quando os domínios de produção estão bloqueados (ex.: rede corporativa). Diferente das
+rotas Cloudflare, aqui web e API dividem o **mesmo hostname** (`groo.myqnapcloud.com`) e são
+diferenciadas por **porta**, não subdomínio — o myQNAPcloud só dá um alias por conta.
+
+1. As portas `8543` (web) e `8544` (API) já são expostas em `127.0.0.1` pelo
+   `docker-compose.qnap.yml` (não acessíveis direto da LAN/internet).
+2. Painel de Controlo → **Acesso à rede → Proxy reverso** → Adicionar, uma regra pra cada:
+
+   | Nome | Origem | Destino |
+   |------|--------|---------|
+   | `note-web` | `https://groo.myqnapcloud.com:8443` | `http://127.0.0.1:8543` |
+   | `note-api` | `https://groo.myqnapcloud.com:8444` | `http://127.0.0.1:8544` |
+
+3. Adicionar `https://groo.myqnapcloud.com:8443` nas Origens JavaScript autorizadas do OAuth
+   (§1) e em `Cors:AllowedOrigins` (já presente no `docker-compose.qnap.yml`).
+
+O TLS é terminado pelo proxy reverso do QTS com o certificado do myQNAPcloud; os containers
+continuam recebendo HTTP puro internamente, igual ao cloudflared.
+
+## 8. Verificar
 
 ```
 https://note-api.ultrasoft.app.br/health  → {"status":"ok"}
 https://note.ultrasoft.app.br             → login Google (negrume@gmail.com)
+https://groo.myqnapcloud.com:8443         → login Google (via proxy reverso do QTS)
 ```
 
 ---
@@ -130,6 +153,8 @@ https://note.ultrasoft.app.br             → login Google (negrume@gmail.com)
 
 ## Notas
 
-- **Sem `ports:`** — só `expose`; quem fala com o mundo é o `cloudflared`.
+- **`ports:` só em `127.0.0.1`** (8543 web / 8544 API) — pro proxy reverso do QTS (§7,
+  acesso via myQNAPcloud). Quem fala com o mundo pelos domínios de produção continua sendo
+  só o `cloudflared`; essas portas não ficam acessíveis da LAN nem da internet direto.
 - API roda como root (escreve nos volumes bind-mounted); não publicada no host.
 - Trocar `GoogleClientId`/`ApiBaseUrl`: edite `appsettings.Production.json`, republique a web (§4) e reinicie.
