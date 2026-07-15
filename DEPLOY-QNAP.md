@@ -9,12 +9,8 @@ mesmo `cloudflared`. Mexer/recriar um app **não derruba os outros**.
 cloudflared   app-teste     app-note-api      app-note-web
  (app 1)       (app 2)       (───── app 3: ultranote ─────)
 
-  note.ultrasoft.app.br         → http://app-note-web:8080     (rota antiga)
-  note-api.ultrasoft.app.br     → http://app-note-api:8080     (rota antiga)
-  note.ultrasoftinc.com.br      → http://app-note-web:8080     (rota antiga)
-  note-api.ultrasoftinc.com.br  → http://app-note-api:8080     (rota antiga)
-  www.ultrasoft.app.br/ultranote     → http://app-note-web:8080  (rota atual)
-  www.ultrasoftinc.com.br/ultranote  → http://app-note-web:8080  (rota atual)
+  www.ultrasoft.app.br/ultranote      → http://app-note-web:8080
+  www.ultrasoftinc.com.br/ultranote   → http://app-note-web:8080
   groo.myqnapcloud.com:8443/ultranote → (via proxy reverso do QTS, ver §7)
 ```
 
@@ -23,8 +19,7 @@ cloudflared   app-teste     app-note-api      app-note-web
 > caminho `/ultranote`, com `www`/raiz reservado pro site institucional (`app-www`). Web e API
 > ficam sempre na **mesma origem** (`.../ultranote/api-note/*` — nginx do `app-note-web`
 > repassa pra `app-note-api`, ver `nginx.conf`), então nem `SameSite`/CORS entram em jogo. As
-> rotas antigas (`note.<domínio>` / `note-api.<domínio>`) continuam ativas em paralelo — ver
-> TODO.md pra aposentá-las quando não precisar mais delas.
+> rotas antigas (`note.<domínio>` / `note-api.<domínio>`) foram removidas do Cloudflare.
 
 ## ⚠️ Particularidade deste NAS: build não tem internet
 
@@ -44,10 +39,10 @@ rodamos as **imagens oficiais** `aspnet`/`nginx` montando os arquivos publicados
 2. **Credenciais → ID do cliente OAuth → Aplicativo da Web**.
 3. **Origens JavaScript autorizadas**: `https://www.ultrasoft.app.br`,
    `https://www.ultrasoftinc.com.br`, `https://groo.myqnapcloud.com:8443`,
-   `http://localhost:5200`, `http://127.0.0.1:5200` — mais as antigas
-   `https://note.ultrasoft.app.br`/`https://note.ultrasoftinc.com.br` enquanto as rotas
-   antigas ainda estiverem no ar. GIS valida só a **origem** (domínio+porta, sem path), então
-   o `/ultranote` não entra aqui.
+   `http://localhost:5200`, `http://127.0.0.1:5200`. GIS valida só a **origem**
+   (domínio+porta, sem path), então o `/ultranote` não entra aqui. (As antigas
+   `https://note.ultrasoft.app.br`/`https://note.ultrasoftinc.com.br` podem ser removidas
+   agora que as rotas Cloudflare correspondentes não existem mais.)
 4. Copie o **Client ID** (o *secret* não é usado).
 
 ## 2. Configurar a web
@@ -61,11 +56,10 @@ rodamos as **imagens oficiais** `aspnet`/`nginx` montando os arquivos publicados
 ```
 
 `ApiBaseUrl` só é usado como *fallback* (dev local, ou host que não bate com nenhum padrão
-conhecido). Em produção, o app deriva o endereço da API a partir da própria URL da página:
-se carregado sob `/ultranote/` (esquema atual, ver visão geral acima), chama a API na mesma
-origem em `.../ultranote/api-note/`; senão cai nas regras antigas (`note.X` → `note-api.X` /
-myQNAPcloud raiz), mantidas só enquanto as rotas antigas convivem em paralelo — ver
-`UltraNote.Web/Program.cs`.
+conhecido). Em produção, o app deriva o endereço da API a partir da própria URL da página: se
+carregado sob `/ultranote/` (esquema atual, ver visão geral acima), chama a API na mesma
+origem em `.../ultranote/api-note/`; senão cai na regra legada do myQNAPcloud raiz (sem
+prefixo) — ver `UltraNote.Web/Program.cs`.
 
 ## 3. Código + volumes no NAS
 
@@ -111,17 +105,15 @@ Aplicações → **Criar**, colando o YAML. Ordem (o `cloudflared` cria a rede `
 ## 6. Rotas Cloudflare
 
 Túnel `qnap` → Routes → Add route. Esquema atual: `www.<domínio>` com path `/ultranote`,
-repetido pros dois domínios de produção, **mais** as rotas antigas (mantidas em paralelo até
-serem aposentadas — ver TODO.md):
+repetido pros dois domínios de produção:
 
 | Hostname | Path | Service URL |
 |----------|------|-------------|
 | `www.ultrasoft.app.br` | `^/ultranote` | `http://app-note-web:8080` |
 | `www.ultrasoftinc.com.br` | `^/ultranote` | `http://app-note-web:8080` |
-| `note.ultrasoft.app.br` *(antiga)* | — | `http://app-note-web:8080` |
-| `note-api.ultrasoft.app.br` *(antiga)* | — | `http://app-note-api:8080` |
-| `note.ultrasoftinc.com.br` *(antiga)* | — | `http://app-note-web:8080` |
-| `note-api.ultrasoftinc.com.br` *(antiga)* | — | `http://app-note-api:8080` |
+
+(As rotas antigas `note.<domínio>`/`note-api.<domínio>` foram removidas — o UltraNote não
+depende mais delas.)
 
 > **Path é regex, não glob.** `/ultranote*` significa "zero ou mais `e`" (o `*` só afeta o
 > caractere anterior), **não** "prefixo `/ultranote` seguido de qualquer coisa" — use
@@ -177,10 +169,6 @@ https://www.ultrasoft.app.br/ultranote/api-note/health     → {"status":"ok"}
 https://www.ultrasoft.app.br/ultranote                     → login Google (negrume@gmail.com)
 https://www.ultrasoftinc.com.br/ultranote                  → login Google
 https://groo.myqnapcloud.com:8443/ultranote                → login Google (via proxy reverso do QTS)
-
-# rotas antigas, enquanto ainda estiverem no ar:
-https://note-api.ultrasoft.app.br/health  → {"status":"ok"}
-https://note.ultrasoft.app.br             → login Google
 ```
 
 ---

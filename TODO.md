@@ -38,14 +38,12 @@ Itens concluídos vivem em "Já entregue", no final do arquivo.
   institucional (`app-www`). Base href dinâmico via script inline no `index.html` (detecta
   `/ultranote/` no `location.pathname` antes de carregar o Blazor — resolveu a "pegadinha"
   que estava anotada aqui). `Program.cs` deriva a URL da API de forma única (mesma origem +
-  `/ultranote/api-note/`), com as regras antigas (`note.<domínio>` / myQNAPcloud raiz)
-  mantidas como fallback enquanto as rotas antigas convivem em paralelo. Rotas Cloudflare
-  novas: hostname `www.<domínio>`, path `^/ultranote` (regex — cuidado, não é glob) —
+  `/ultranote/api-note/`), com fallback só pro myQNAPcloud raiz (sem prefixo). Rotas
+  Cloudflare: hostname `www.<domínio>`, path `^/ultranote` (regex — cuidado, não é glob) —
   **precisa vir antes** da rota catch-all pro `app-www` no mesmo hostname (Cloudflare casa
   a primeira rota que bater, não a mais específica).
-  - [ ] **Aposentar as rotas antigas** (`note.*`/`note-api.*` no Cloudflare, branches de
-    fallback correspondentes no `Program.cs`) depois de confirmar que ninguém mais depende
-    delas.
+  - [x] **Aposentar as rotas antigas** — `note.*`/`note-api.*` removidas do Cloudflare, e o
+    branch de fallback correspondente removido do `Program.cs`.
 - [ ] **Gateway Caddy pro acesso via myQNAPcloud** (opcional — não é mais bloqueante pra nada,
   já que `/ultranote` funciona hoje através do proxy reverso do QTS com certificado
   autoassinado). Só entra em jogo se quiser: (a) certificado Let's Encrypt de verdade em vez

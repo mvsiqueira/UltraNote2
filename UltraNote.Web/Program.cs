@@ -20,23 +20,19 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 //                                                  API sits right alongside it, same origin,
 //                                                  one relative rule everywhere.)
 //
-// Everything else falls back to the legacy per-host rules (still live in parallel during
-// the migration — see DEPLOY-QNAP.md) or wwwroot/appsettings[.Production].json's
-// "ApiBaseUrl" for local dev. Remove the legacy branches once the old routes are retired.
+// Everything else falls back to the myQNAPcloud legacy root path (no /ultranote/ prefix —
+// only reachable if someone visits the bare domain instead of the documented /ultranote
+// URL; harmless to keep) or wwwroot/appsettings[.Production].json's "ApiBaseUrl" for local
+// dev. The note.<domain>/note-api.<domain> Cloudflare routes have been retired — see
+// DEPLOY-QNAP.md.
 var currentUri = new Uri(builder.HostEnvironment.BaseAddress);
 string apiBaseUrl;
 if (currentUri.AbsolutePath.StartsWith("/ultranote/", StringComparison.OrdinalIgnoreCase))
 {
     apiBaseUrl = $"{builder.HostEnvironment.BaseAddress}api-note/";
 }
-else if (currentUri.Host.StartsWith("note.", StringComparison.OrdinalIgnoreCase))
-{
-    // Legacy Cloudflare routes (note.<domain> / note-api.<domain>).
-    apiBaseUrl = $"{currentUri.Scheme}://note-api.{currentUri.Host["note.".Length..]}";
-}
 else if (currentUri.Host.EndsWith(".myqnapcloud.com", StringComparison.OrdinalIgnoreCase))
 {
-    // Legacy myQNAPcloud path (root, no /ultranote/ prefix yet).
     apiBaseUrl = $"{currentUri.GetLeftPart(UriPartial.Authority)}/api-note/";
 }
 else
