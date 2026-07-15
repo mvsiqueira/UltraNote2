@@ -114,23 +114,37 @@ de produção):
 ## 7. Acesso alternativo via myQNAPcloud (opcional)
 
 Útil quando os domínios de produção estão bloqueados (ex.: rede corporativa). Diferente das
-rotas Cloudflare, aqui web e API dividem o **mesmo hostname** (`groo.myqnapcloud.com`) e são
-diferenciadas por **porta**, não subdomínio — o myQNAPcloud só dá um alias por conta.
+rotas Cloudflare, aqui web e API dividem o **mesmo hostname e a mesma porta**
+(`groo.myqnapcloud.com:8443`) — o myQNAPcloud só dá um alias por conta, e uma segunda porta
+pra API se mostrou pouco confiável (proxy corporativo bloqueou o `CONNECT` numa porta não-
+padrão nos nossos testes). O nginx do `app-note-web` repassa `/api-note/*` pra
+`app-note-api:8080` por dentro da rede Docker — ver `nginx.conf`.
 
-1. As portas `8543` (web) e `8544` (API) já são expostas em `127.0.0.1` pelo
-   `docker-compose.qnap.yml` (não acessíveis direto da LAN/internet).
-2. Painel de Controlo → **Acesso à rede → Proxy reverso** → Adicionar, uma regra pra cada:
+1. A porta `8543` já é exposta em `127.0.0.1` pelo `docker-compose.qnap.yml` (não acessível
+   direto da LAN/internet).
+2. Painel de Controlo → **Acesso à rede → Proxy reverso** → Adicionar:
 
    | Nome | Origem | Destino |
    |------|--------|---------|
    | `note-web` | `https://groo.myqnapcloud.com:8443` | `http://127.0.0.1:8543` |
-   | `note-api` | `https://groo.myqnapcloud.com:8444` | `http://127.0.0.1:8544` |
 
 3. Adicionar `https://groo.myqnapcloud.com:8443` nas Origens JavaScript autorizadas do OAuth
-   (§1) e em `Cors:AllowedOrigins` (já presente no `docker-compose.qnap.yml`).
+   (§1). Não precisa de `Cors:AllowedOrigins` pra esse domínio — web e API são a mesma
+   origem, então nem CORS entra em jogo.
 
-O TLS é terminado pelo proxy reverso do QTS com o certificado do myQNAPcloud; os containers
-continuam recebendo HTTP puro internamente, igual ao cloudflared.
+O TLS é terminado pelo proxy reverso do QTS com o certificado (autoassinado, salvo
+configuração — ver nota abaixo) do NAS; os containers continuam recebendo HTTP puro
+internamente, igual ao cloudflared.
+
+> **Certificado não confiável**: por padrão o proxy reverso do QTS usa o certificado
+> autoassinado do NAS — o navegador avisa "não seguro", mas funciona (Avançado → Continuar).
+> Solução definitiva pendente: ver TODO.md (gateway Caddy do `qnap-test-site`, que emite
+> certificado Let's Encrypt de verdade pro myQNAPcloud).
+
+> **NAT duplo (modem + roteador)**: se o modem da operadora também fizer roteamento (não só
+> bridge), o port forward precisa ser feito **nos dois**: no modem, apontando pro IP do
+> roteador (visto na rede do modem, não o gateway `192.168.x.1` do roteador); no roteador,
+> apontando pro IP do NAS. Confirme o IP do WAN do roteador — se for privado, é NAT duplo.
 
 ## 8. Verificar
 

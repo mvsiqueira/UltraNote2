@@ -15,13 +15,17 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 // (e.g. web on ultrasoftinc.com.br calling an API on ultrasoft.app.br) would not, breaking
 // inline images/attachments on whichever production domain wasn't visited first.
 //
-//   note.<domain>              → note-api.<domain>              (Cloudflare Tunnel domains:
-//                                                                 two hostnames, same site)
-//   groo.myqnapcloud.com:8443  → groo.myqnapcloud.com:8444       (myQNAPcloud reverse proxy:
-//                                                                 one hostname, telling web/
-//                                                                 API apart by port instead —
-//                                                                 cookies aren't port-scoped,
-//                                                                 so this is same-site too)
+//   note.<domain>              → note-api.<domain>       (Cloudflare Tunnel domains: two
+//                                                          hostnames, same site)
+//   groo.myqnapcloud.com:8443  → same origin + /api-note/ (myQNAPcloud: nginx in
+//                                                          app-note-web proxies /api-note/*
+//                                                          to the API container — see
+//                                                          nginx.conf. One port only:
+//                                                          corporate proxies commonly block
+//                                                          CONNECT tunneling to a second,
+//                                                          non-standard HTTPS port, which is
+//                                                          exactly what we needed this
+//                                                          access path to survive.)
 //
 // Falls back to wwwroot/appsettings[.Production].json's "ApiBaseUrl" for local dev
 // (loopback host) or any host matching neither pattern.
@@ -31,9 +35,9 @@ if (currentUri.Host.StartsWith("note.", StringComparison.OrdinalIgnoreCase))
 {
     apiBaseUrl = $"{currentUri.Scheme}://note-api.{currentUri.Host["note.".Length..]}";
 }
-else if (currentUri.Host.EndsWith(".myqnapcloud.com", StringComparison.OrdinalIgnoreCase) && currentUri.Port == 8443)
+else if (currentUri.Host.EndsWith(".myqnapcloud.com", StringComparison.OrdinalIgnoreCase))
 {
-    apiBaseUrl = $"{currentUri.Scheme}://{currentUri.Host}:8444";
+    apiBaseUrl = $"{currentUri.GetLeftPart(UriPartial.Authority)}/api-note/";
 }
 else
 {

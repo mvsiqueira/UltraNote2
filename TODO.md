@@ -33,6 +33,22 @@ Itens concluídos vivem em "Já entregue", no final do arquivo.
 
 ## 5. Infra / Deploy / Qualidade
 
+- [ ] **Gateway Caddy pro acesso via myQNAPcloud** (substitui a solução atual — proxy reverso
+  do QTS com certificado autoassinado + rota `/api-note/` no nginx, ver DEPLOY-QNAP.md §7).
+  Já existe um `Caddyfile` parcialmente pronto em `../qnap-test-site` com
+  `groo.myqnapcloud.com` configurado, faltando o `docker-compose` que sobe o Caddy na rede
+  `edge` e o roteamento por caminho pros apps reais (hoje só aponta pro app de teste).
+  - [ ] Caddy emite certificado Let's Encrypt de verdade (resolve o aviso "não seguro") e
+    escuta em porta padrão (443, via tradução no roteador de 443→18443 já documentada em
+    `qnap-test-site/REVERSE-PROXY.md`) — mais robusto contra bloqueio de porta não-padrão
+    do que a porta 8443 atual.
+  - [ ] Roteamento por caminho: `/` → `app-www:3000` (site principal), `/note/` →
+    `app-note-web:8080`, `/api-note/` → `app-note-api:8080` (ou reaproveita a rota que já
+    existe no nginx do próprio UltraNote).
+  - [ ] **Pegadinha**: mover o UltraNote pra `/note/` exige que o `<base href>` do
+    `index.html` do Blazor varie conforme o domínio de acesso (hoje é fixo em `/`, servido
+    na raiz em todos os domínios atuais) — não é trivial no Blazor WASM, precisa de um
+    script inline que ajusta o `<base>` antes do app carregar, baseado em `location.pathname`.
 - [ ] Automatizar o fluxo de atualização (script: copiar p/ NAS → `docker run ... publish` → recriar app).
 - [ ] **Backup** automatizado de `/share/Container/ultranote-data` e `/ultranote-assets` (nível NAS — complementa o backup/restore manual já disponível no app, ver "Já entregue").
 - [ ] (Dev) Decidir se o `appsettings.json` local fica **sem** `GoogleClientId` (dev sem login, mais ágil) — produção continua protegida.
@@ -112,6 +128,7 @@ Itens concluídos vivem em "Já entregue", no final do arquivo.
 - [x] **Cookie de sessão para anexos** — `<img src>`/`<a href>` embutidos na nota não carregam o Bearer token (requisição crua do navegador). `POST /api/auth/session` (chamado a cada login/renovação de token) planta um cookie `HttpOnly; Secure; SameSite=Lax` (esquema `AttachmentCookie`, expira em 24h com renovação deslizante) que a API aceita como alternativa ao Bearer em qualquer endpoint. Revogável trocando a chave de Data Protection — ao contrário do GUID público que era usado antes.
   - [x] Chave de Data Protection persistida em `/data/keys` (mesmo volume do SQLite) — sem isso, toda recriação do container trocava a chave e invalidava todo cookie já emitido.
   - [x] Web deriva o endereço da API a partir do próprio host da página (`note.X` → `note-api.X`) em vez de um endereço fixo — mantém web e API sempre no mesmo domínio, necessário pro `SameSite=Lax` funcionar em qualquer um dos dois domínios de produção.
+- [x] **Acesso via myQNAPcloud** (`groo.myqnapcloud.com:8443`) — alternativa pra quando os domínios de produção estão bloqueados (rede corporativa). Web e API na mesma origem (porta única): o nginx do `app-note-web` repassa `/api-note/*` internamente pra `app-note-api:8080`, então nem CORS é necessário. Chegamos nisso depois de testar com uma segunda porta dedicada pra API e o proxy da empresa bloquear o `CONNECT` nela — proxies corporativos costumam só liberar túnel HTTPS pra portas "conhecidas". Certificado ainda é o autoassinado do QNAP (aviso "não seguro", mas funciona); solução definitiva com Caddy + Let's Encrypt fica pendente (ver Infra/Deploy).
 
 ### Visual / Identidade
 

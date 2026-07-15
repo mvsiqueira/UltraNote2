@@ -17,14 +17,18 @@
 #
 # Acesso alternativo via myQNAPcloud (rede bloqueada no trabalho não bloqueia isso):
 # reverse proxy do QTS (Painel de Controlo > Acesso à rede > Proxy reverso) termina TLS
-# com o certificado do myQNAPcloud e encaminha em HTTP puro pras portas abaixo, expostas
-# só em 127.0.0.1 (não acessíveis direto da LAN/internet, só via o proxy do QNAP):
+# com o certificado do myQNAPcloud e encaminha em HTTP puro pra app-note-web, exposta só
+# em 127.0.0.1 (não acessível direto da LAN/internet, só via o proxy do QNAP):
 #   https://groo.myqnapcloud.com:8443 -> http://127.0.0.1:8543 -> app-note-web:8080
-#   https://groo.myqnapcloud.com:8444 -> http://127.0.0.1:8544 -> app-note-api:8080
-# Web e API ficam no MESMO host (groo.myqnapcloud.com), diferenciados por porta — não pela
-# subdomain como nos outros dois domínios — porque o myQNAPcloud só dá um hostname por
-# alias. Cookies não são específicos de porta, então isso evita o problema de SameSite=Lax
-# sem precisar duplicar a logica de troca de subdomínio (ver UltraNote.Web/Program.cs).
+# UMA porta só (web e API) — o nginx do app-note-web tem uma rota /api-note/ que repassa
+# pra app-note-api:8080 por dentro da rede "edge" (ver nginx.conf). Testamos com uma
+# segunda porta pra API e o proxy corporativo da empresa bloqueou o CONNECT nela (só
+# libera pra portas "conhecidas"), por isso web+API dividem a mesma porta/origem — o que
+# também evita de vez o problema de cookie cross-site (SameSite=Lax), já que nem CORS
+# é necessário quando é a mesma origem.
+#
+# Pendência: mover isso pro Caddy do qnap-test-site (certificado real via Let's Encrypt,
+# porta 443 padrão, www na raiz e /note/ pra este app) — ver TODO.md.
 
 services:
   app-note-api:
@@ -43,7 +47,6 @@ services:
       - Auth__AllowedEmails__1=mvsiqueira@gmail.com
       - Cors__AllowedOrigins__0=https://note.ultrasoft.app.br
       - Cors__AllowedOrigins__1=https://note.ultrasoftinc.com.br
-      - Cors__AllowedOrigins__2=https://groo.myqnapcloud.com:8443
       - DataProtection__KeysPath=/data/keys
     volumes:
       - /share/Container/ultranote-app/_out_api:/app
@@ -58,8 +61,6 @@ services:
     restart: unless-stopped
     expose:
       - "8080"
-    ports:
-      - "127.0.0.1:8544:8080"
     networks:
       - edge
 
