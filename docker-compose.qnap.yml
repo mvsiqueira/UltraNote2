@@ -11,15 +11,17 @@
 #   /share/Container/ultranote-data  e  /share/Container/ultranote-assets  (volumes)
 #   rede "edge" criada (pelo app cloudflared)
 #
-# Rotas Cloudflare:
-#   note-api.ultrasoft.app.br -> http://app-note-api:8080
-#   note.ultrasoft.app.br     -> http://app-note-web:8080
+# Esquema atual: tudo sob /ultranote, mesma origem pra web+API nos 3 domínios de acesso —
+# ver DEPLOY-QNAP.md §6-7 pro detalhe das rotas Cloudflare (www.<domínio>, path ^/ultranote,
+# tem que vir ANTES do catch-all do app-www no mesmo hostname) e do proxy reverso do QTS.
+# Rotas antigas (note.<domínio> / note-api.<domínio>) continuam ativas em paralelo por
+# enquanto — ver TODO.md pra aposentá-las.
 #
 # Acesso alternativo via myQNAPcloud (rede bloqueada no trabalho não bloqueia isso):
 # reverse proxy do QTS (Painel de Controlo > Acesso à rede > Proxy reverso) termina TLS
 # com o certificado do myQNAPcloud e encaminha em HTTP puro pra app-note-web, exposta só
 # em 127.0.0.1 (não acessível direto da LAN/internet, só via o proxy do QNAP):
-#   https://groo.myqnapcloud.com:8443 -> http://127.0.0.1:8543 -> app-note-web:8080
+#   https://groo.myqnapcloud.com:8443/ultranote -> http://127.0.0.1:8543 -> app-note-web:8080
 # UMA porta só (web e API) — o nginx do app-note-web tem uma rota /api-note/ que repassa
 # pra app-note-api:8080 por dentro da rede "edge" (ver nginx.conf). Testamos com uma
 # segunda porta pra API e o proxy corporativo da empresa bloqueou o CONNECT nela (só
@@ -27,8 +29,8 @@
 # também evita de vez o problema de cookie cross-site (SameSite=Lax), já que nem CORS
 # é necessário quando é a mesma origem.
 #
-# Pendência: mover isso pro Caddy do qnap-test-site (certificado real via Let's Encrypt,
-# porta 443 padrão, www na raiz e /note/ pra este app) — ver TODO.md.
+# Gateway Caddy (certificado real via Let's Encrypt, www também na raiz do myQNAPcloud)
+# continua opcional/pendente — não bloqueia nada hoje. Ver TODO.md.
 
 services:
   app-note-api:

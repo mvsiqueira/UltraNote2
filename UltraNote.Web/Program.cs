@@ -8,35 +8,35 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-// API base URL: derived from the page's own host/port, so the web app always calls the
-// API on the SAME site it was loaded from. This matters because the session cookie (see
-// UltraNote.Api's GoogleAuth.CookieScheme) is SameSite=Lax — same-site subresource
-// requests (embedded <img>, background API calls) carry it fine, but a cross-SITE one
-// (e.g. web on ultrasoftinc.com.br calling an API on ultrasoft.app.br) would not, breaking
-// inline images/attachments on whichever production domain wasn't visited first.
+// API base URL: derived from the page's own host/path, so the web app always calls the
+// API on the SAME origin it was loaded from (matters for the session cookie — see
+// UltraNote.Api's GoogleAuth.CookieScheme — which subresource requests like embedded
+// <img>/<a> need on-origin to be sent).
 //
-//   note.<domain>              → note-api.<domain>       (Cloudflare Tunnel domains: two
-//                                                          hostnames, same site)
-//   groo.myqnapcloud.com:8443  → same origin + /api-note/ (myQNAPcloud: nginx in
-//                                                          app-note-web proxies /api-note/*
-//                                                          to the API container — see
-//                                                          nginx.conf. One port only:
-//                                                          corporate proxies commonly block
-//                                                          CONNECT tunneling to a second,
-//                                                          non-standard HTTPS port, which is
-//                                                          exactly what we needed this
-//                                                          access path to survive.)
+//   .../ultranote/*  → .../ultranote/api-note/*  (unified scheme: every production domain
+//                                                  now serves the app under the same
+//                                                  /ultranote/ prefix — see index.html's
+//                                                  base-href script and nginx.conf — so the
+//                                                  API sits right alongside it, same origin,
+//                                                  one relative rule everywhere.)
 //
-// Falls back to wwwroot/appsettings[.Production].json's "ApiBaseUrl" for local dev
-// (loopback host) or any host matching neither pattern.
+// Everything else falls back to the legacy per-host rules (still live in parallel during
+// the migration — see DEPLOY-QNAP.md) or wwwroot/appsettings[.Production].json's
+// "ApiBaseUrl" for local dev. Remove the legacy branches once the old routes are retired.
 var currentUri = new Uri(builder.HostEnvironment.BaseAddress);
 string apiBaseUrl;
-if (currentUri.Host.StartsWith("note.", StringComparison.OrdinalIgnoreCase))
+if (currentUri.AbsolutePath.StartsWith("/ultranote/", StringComparison.OrdinalIgnoreCase))
 {
+    apiBaseUrl = $"{builder.HostEnvironment.BaseAddress}api-note/";
+}
+else if (currentUri.Host.StartsWith("note.", StringComparison.OrdinalIgnoreCase))
+{
+    // Legacy Cloudflare routes (note.<domain> / note-api.<domain>).
     apiBaseUrl = $"{currentUri.Scheme}://note-api.{currentUri.Host["note.".Length..]}";
 }
 else if (currentUri.Host.EndsWith(".myqnapcloud.com", StringComparison.OrdinalIgnoreCase))
 {
+    // Legacy myQNAPcloud path (root, no /ultranote/ prefix yet).
     apiBaseUrl = $"{currentUri.GetLeftPart(UriPartial.Authority)}/api-note/";
 }
 else

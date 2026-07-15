@@ -6,6 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>UltraNote</title>
     <base href="/" />
+    <script>
+        // Produção serve o app sob /ultranote/ (mesmo prefixo nos 3 domínios); dev local
+        // serve na raiz. Precisa rodar ANTES dos <link>/<script> abaixo, que resolvem
+        // contra o <base> na ordem em que o HTML é parseado.
+        (function () {
+            if (location.pathname.indexOf('/ultranote/') === 0 || location.pathname === '/ultranote') {
+                document.querySelector('base').setAttribute('href', '/ultranote/');
+            }
+        })();
+    </script>
     <link rel="preload" id="webassembly" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css" />
     <link rel="stylesheet" href="_content/UltraNote.UI/ultranote.css" />

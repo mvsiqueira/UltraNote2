@@ -33,22 +33,28 @@ Itens concluídos vivem em "Já entregue", no final do arquivo.
 
 ## 5. Infra / Deploy / Qualidade
 
-- [ ] **Gateway Caddy pro acesso via myQNAPcloud** (substitui a solução atual — proxy reverso
-  do QTS com certificado autoassinado + rota `/api-note/` no nginx, ver DEPLOY-QNAP.md §7).
+- [x] **Unificar o UltraNote em `/ultranote` nos 3 domínios** (`www.ultrasoft.app.br`,
+  `www.ultrasoftinc.com.br`, `groo.myqnapcloud.com:8443`), com `www`/raiz reservado pro site
+  institucional (`app-www`). Base href dinâmico via script inline no `index.html` (detecta
+  `/ultranote/` no `location.pathname` antes de carregar o Blazor — resolveu a "pegadinha"
+  que estava anotada aqui). `Program.cs` deriva a URL da API de forma única (mesma origem +
+  `/ultranote/api-note/`), com as regras antigas (`note.<domínio>` / myQNAPcloud raiz)
+  mantidas como fallback enquanto as rotas antigas convivem em paralelo. Rotas Cloudflare
+  novas: hostname `www.<domínio>`, path `^/ultranote` (regex — cuidado, não é glob) —
+  **precisa vir antes** da rota catch-all pro `app-www` no mesmo hostname (Cloudflare casa
+  a primeira rota que bater, não a mais específica).
+  - [ ] **Aposentar as rotas antigas** (`note.*`/`note-api.*` no Cloudflare, branches de
+    fallback correspondentes no `Program.cs`) depois de confirmar que ninguém mais depende
+    delas.
+- [ ] **Gateway Caddy pro acesso via myQNAPcloud** (opcional — não é mais bloqueante pra nada,
+  já que `/ultranote` funciona hoje através do proxy reverso do QTS com certificado
+  autoassinado). Só entra em jogo se quiser: (a) certificado Let's Encrypt de verdade em vez
+  do autoassinado, ou (b) servir o `app-www` também na raiz do myQNAPcloud (simetria com os
+  outros 2 domínios). Exige liberar a porta 80 no roteador/modem (NAT duplo) e substituir o
+  proxy reverso do QTS que já está funcionando — avaliar o custo/benefício antes de mexer.
   Já existe um `Caddyfile` parcialmente pronto em `../qnap-test-site` com
   `groo.myqnapcloud.com` configurado, faltando o `docker-compose` que sobe o Caddy na rede
   `edge` e o roteamento por caminho pros apps reais (hoje só aponta pro app de teste).
-  - [ ] Caddy emite certificado Let's Encrypt de verdade (resolve o aviso "não seguro") e
-    escuta em porta padrão (443, via tradução no roteador de 443→18443 já documentada em
-    `qnap-test-site/REVERSE-PROXY.md`) — mais robusto contra bloqueio de porta não-padrão
-    do que a porta 8443 atual.
-  - [ ] Roteamento por caminho: `/` → `app-www:3000` (site principal), `/note/` →
-    `app-note-web:8080`, `/api-note/` → `app-note-api:8080` (ou reaproveita a rota que já
-    existe no nginx do próprio UltraNote).
-  - [ ] **Pegadinha**: mover o UltraNote pra `/note/` exige que o `<base href>` do
-    `index.html` do Blazor varie conforme o domínio de acesso (hoje é fixo em `/`, servido
-    na raiz em todos os domínios atuais) — não é trivial no Blazor WASM, precisa de um
-    script inline que ajusta o `<base>` antes do app carregar, baseado em `location.pathname`.
 - [ ] Automatizar o fluxo de atualização (script: copiar p/ NAS → `docker run ... publish` → recriar app).
 - [ ] **Backup** automatizado de `/share/Container/ultranote-data` e `/ultranote-assets` (nível NAS — complementa o backup/restore manual já disponível no app, ver "Já entregue").
 - [ ] (Dev) Decidir se o `appsettings.json` local fica **sem** `GoogleClientId` (dev sem login, mais ágil) — produção continua protegida.

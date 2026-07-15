@@ -4,11 +4,9 @@ Lista de URLs relevantes para o app
 
 ## UltraNote
 
-https://note.ultrasoft.app.br/
-
-## UltraNote (local)
-
-http://127.0.0.1:5200/
+https://www.ultrasoft.app.br/ultranote  
+https://www.ultrasoftinc.com.br/ultranote  
+https://groo.myqnapcloud.com:8443/ultranote  
 
 ## Cloudflare
 
