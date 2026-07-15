@@ -7,7 +7,15 @@ Itens concluídos vivem em "Já entregue", no final do arquivo.
 
 ## 1. UX e robustez
 
-- [ ] **Adaptar para mobile** — layout responsivo: sidebar recolhível, toolbar do editor adaptada para toque, área de edição ocupa tela cheia.
+- [x] **Adaptar para mobile** — layout mestre-detalhe abaixo de 768px: a árvore ocupa a tela
+  toda até abrir uma nota, que vira editor em tela cheia com botão "Voltar" (que passa pelo
+  aviso de alterações não salvas, igual trocar de nota). Toolbars com alvos de toque maiores
+  e a do editor rico com scroll horizontal. Recarregar a página restaura a nota selecionada
+  (destacada na árvore) sem abrir o editor automaticamente. Duas pegadinhas de layout que
+  vale lembrar: input dentro de flexbox não encolhe sem `min-width: 0` (`.title-input`
+  empurrava os botões de favoritar/arquivar/salvar pra fora da tela); e uma única coluna de
+  grid (`1fr`) tem o mesmo problema — precisa de `minmax(0, 1fr)`, senão o grid não encolhe
+  abaixo do conteúdo mínimo (`.body` ficava mais largo que a viewport, sem scroll visível).
 
 ## 2. Multiusuário (segregação de dados)
 
@@ -44,15 +52,19 @@ Itens concluídos vivem em "Já entregue", no final do arquivo.
   a primeira rota que bater, não a mais específica).
   - [x] **Aposentar as rotas antigas** — `note.*`/`note-api.*` removidas do Cloudflare, e o
     branch de fallback correspondente removido do `Program.cs`.
-- [ ] **Gateway Caddy pro acesso via myQNAPcloud** (opcional — não é mais bloqueante pra nada,
-  já que `/ultranote` funciona hoje através do proxy reverso do QTS com certificado
-  autoassinado). Só entra em jogo se quiser: (a) certificado Let's Encrypt de verdade em vez
-  do autoassinado, ou (b) servir o `app-www` também na raiz do myQNAPcloud (simetria com os
-  outros 2 domínios). Exige liberar a porta 80 no roteador/modem (NAT duplo) e substituir o
-  proxy reverso do QTS que já está funcionando — avaliar o custo/benefício antes de mexer.
-  Já existe um `Caddyfile` parcialmente pronto em `../qnap-test-site` com
-  `groo.myqnapcloud.com` configurado, faltando o `docker-compose` que sobe o Caddy na rede
-  `edge` e o roteamento por caminho pros apps reais (hoje só aponta pro app de teste).
+- [ ] **Servir mais de um app via myQNAPcloud** — hoje `groo.myqnapcloud.com:8443` inteiro
+  aponta só pro `app-note-web` (o proxy reverso do QTS não divide por caminho, só host+porta),
+  então nem o `app-www` aparece lá. Sem necessidade concreta agora (não tem outro app pra
+  publicar) — só entra em jogo se aparecer. Duas formas, do mais simples pro mais robusto:
+  - [ ] **Estender o nginx do `app-note-web`** pra também repassar caminhos fora de
+    `/ultranote` pro `app-www:3000` (mesma técnica já usada pro `/api-note/`) — zero infra
+    nova, só configuração. Mais simples, escala bem pra 2-3 apps.
+  - [ ] **Gateway Caddy** — mais "correto" a longo prazo (certificado Let's Encrypt de
+    verdade em vez do autoassinado do QTS, config dedicada de roteamento), mas custa mais:
+    liberar a porta 80 no roteador/modem (NAT duplo) e substituir o proxy reverso do QTS que
+    já está funcionando. Já existe um `Caddyfile` parcialmente pronto em `../qnap-test-site`
+    com `groo.myqnapcloud.com` configurado, faltando o `docker-compose` que sobe o Caddy na
+    rede `edge` e o roteamento por caminho pros apps reais (hoje só aponta pro app de teste).
 - [ ] Automatizar o fluxo de atualização (script: copiar p/ NAS → `docker run ... publish` → recriar app).
 - [ ] **Backup** automatizado de `/share/Container/ultranote-data` e `/ultranote-assets` (nível NAS — complementa o backup/restore manual já disponível no app, ver "Já entregue").
 - [ ] (Dev) Decidir se o `appsettings.json` local fica **sem** `GoogleClientId` (dev sem login, mais ágil) — produção continua protegida.

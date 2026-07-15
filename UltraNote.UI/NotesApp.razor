@@ -42,7 +42,7 @@
         </div>
     </header>
 
-    <div class="body" @ref="_bodyEl">
+    <div class="body @(_mobileEditorOpen ? "mobile-editor-open" : "")" @ref="_bodyEl">
         <aside class="sidebar">
             <div class="sidebar-toolbar">
                 <button class="icon-btn" title="Nova pasta" @onclick="ToolbarNewFolder"><i class="ti ti-folder-plus" aria-hidden="true"></i></button>
@@ -158,6 +158,7 @@
             @if (_treeSelectionIsNote && _selectedNote is not null)
             {
                 <div class="editor-head">
+                    <button class="icon-btn back-btn" title="Voltar" @onclick="() => GuardUnsaved(CloseMobileEditor)"><i class="ti ti-arrow-left" aria-hidden="true"></i></button>
                     <input class="title-input" @bind="_title" @bind:event="oninput" />
                     @if (_selectedNote.IsFavorite)
                     {
@@ -545,6 +546,11 @@
     private ElementReference _resizeHandle;
     private bool _dropZoneInitialized;
 
+    /// <summary>Mobile only (see the "Mobile" section of ultranote.css): true switches the
+    /// narrow layout from the folder tree to the full-screen editor. Ignored above the
+    /// breakpoint, where both panels show side by side regardless.</summary>
+    private bool _mobileEditorOpen;
+
     public Guid? SelectedNoteId => _selectedNote?.Id;
     public Guid? SelectedFolderId => _selectedFolderId;
     public bool TreeSelectionIsNote => _treeSelectionIsNote;
@@ -573,7 +579,13 @@
             await _shortcutsJs.InvokeVoidAsync("init", _shortcutsRef);
             var savedId = await JS.InvokeAsync<string?>("localStorage.getItem", "ultranote_selected_note");
             if (savedId is not null && Guid.TryParse(savedId, out var restoredNoteId))
+            {
                 await SelectNoteNow(restoredNoteId);
+                // Restoring on reload should mark the note as selected (tree highlight,
+                // expanded folder) without jumping straight into the full-screen mobile
+                // editor — the user lands on the list and taps in explicitly.
+                _mobileEditorOpen = false;
+            }
             var savedFavVisible = await JS.InvokeAsync<string?>("localStorage.getItem", "ultranote_favorites_visible");
             if (savedFavVisible is not null) _favoritesVisible = savedFavVisible == "true";
             var savedShowArchived = await JS.InvokeAsync<string?>("localStorage.getItem", "ultranote_show_archived");
@@ -665,6 +677,7 @@
     {
         if (_dirty) { _pendingAction = () => SelectFolderNow(folder); StateHasChanged(); return; }
         _selectedNote = null;
+        _mobileEditorOpen = false;
         _title = "";
         _meta = "";
         await SetDirty(false);
@@ -803,6 +816,7 @@
     private async Task SelectNoteNow(Guid id)
     {
         _treeSelectionIsNote = true;
+        _mobileEditorOpen = true;
         try
         {
             _selectedNote = await Api.GetNoteAsync(id);
@@ -825,6 +839,14 @@
         catch (Exception ex) { _status = $"Erro ao abrir nota: {ex.Message}"; }
         await LoadAttachments();
         StateHasChanged();
+    }
+
+    /// <summary>Mobile "back" button: returns to the tree, keeping the note selected/
+    /// highlighted (same as the reload-restore case) rather than clearing it outright.</summary>
+    private Task CloseMobileEditor()
+    {
+        _mobileEditorOpen = false;
+        return Task.CompletedTask;
     }
 
     private async Task ExpandFolder(Guid folderId)
@@ -1101,6 +1123,7 @@
         if (_dirty) { _pendingAction = SelectRootNow; StateHasChanged(); return; }
         _selectedFolderId = null;
         _selectedNote = null;
+        _mobileEditorOpen = false;
         _title = "";
         _meta = "";
         _treeSelectionIsNote = false;
@@ -1111,6 +1134,7 @@
     {
         _selectedFolderId = null;
         _selectedNote = null;
+        _mobileEditorOpen = false;
         _title = "";
         _meta = "";
         _treeSelectionIsNote = false;
@@ -1182,6 +1206,7 @@
     private async Task ClearEditor()
     {
         _selectedNote = null;
+        _mobileEditorOpen = false;
         _treeSelectionIsNote = false;
         _title = "";
         _meta = "";

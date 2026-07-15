@@ -122,6 +122,7 @@ html, body {
   justify-content: center;
   width: 32px;
   height: 32px;
+  flex-shrink: 0;
   border: none;
   border-radius: 8px;
   background: transparent;
@@ -273,8 +274,10 @@ body.col-resize-cursor, body.col-resize-cursor * { cursor: col-resize !important
 .editor-panel { background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
 
 .editor-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px 4px; }
+.back-btn { display: none; flex-shrink: 0; }
 .title-input {
   flex: 1;
+  min-width: 0;
   border: none;
   outline: none;
   background: transparent;
@@ -293,6 +296,8 @@ body.col-resize-cursor, body.col-resize-cursor * { cursor: col-resize !important
   cursor: pointer;
   font-size: 12px;
   font-weight: 500;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .btn-accent:hover { filter: brightness(1.06); }
 .btn-accent:disabled { opacity: .5; cursor: default; }
@@ -707,4 +712,48 @@ body.row-resize-cursor, body.row-resize-cursor * { cursor: row-resize !important
   outline: 2px dashed var(--accent);
   outline-offset: -4px;
   background: var(--accent-soft);
+}
+
+/* ---------- Mobile ---------- */
+/* Master-detail: the tree (.sidebar) fills the screen until a note is opened, then
+   .editor-panel takes over full-screen (.body.mobile-editor-open, toggled from
+   NotesApp.razor's _mobileEditorOpen). Folder-view stays reachable only via the tree's own
+   expand/collapse, since it duplicates what the tree already shows inline. */
+@media (max-width: 768px) {
+  .breadcrumb { display: none; }
+  .search input { width: 90px; }
+
+  /* minmax(0, 1fr), not bare 1fr: a grid track's automatic minimum size is its content's
+     min-content width, not 0 — same gotcha as flex's min-width:auto. Without this, the
+     track (and everything in .editor-panel, e.g. editor-head's title+buttons) can't shrink
+     below that content width, silently pushing content past the viewport with no scrollbar
+     hint. minmax(0, 1fr) forces the floor to 0 so the track actually fits the screen. */
+  .body { grid-template-columns: minmax(0, 1fr); }
+  .sidebar-resize-handle { display: none; }
+  .editor-panel { display: none; }
+  .body.mobile-editor-open .sidebar { display: none; }
+  .body.mobile-editor-open .editor-panel { display: flex; }
+
+  .back-btn { display: inline-flex; }
+
+  /* Bigger tap targets everywhere touch is involved. */
+  .icon-btn { width: 40px; height: 40px; font-size: 19px; }
+  .sidebar-toolbar .icon-btn { width: 36px; height: 36px; font-size: 18px; }
+  .tree-row, .tree-note { padding: 9px 8px; font-size: 14px; }
+  .btn-accent { padding: 9px 16px; font-size: 13px; }
+
+  /* Toolbar has more buttons than fit a phone width — scroll instead of wrap/clip. */
+  .rte-toolbar {
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .rte-toolbar::-webkit-scrollbar { display: none; }
+  .rte-toolbar button { min-width: 38px; height: 38px; font-size: 17px; flex-shrink: 0; }
+
+  .editor-head { padding: 10px 12px 4px; gap: 6px; }
+  .title-input { font-size: 18px; }
+  .rte-prosemirror { padding: 14px 16px; }
 }
