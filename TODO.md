@@ -150,3 +150,22 @@ Itens concluídos vivem em "Já entregue", no final do arquivo.
 
 - [x] **Alterar logo** — ícone SVG inline no brand do topbar (papel com dobra + sparkle dourado Ultrasoft); tema escuro/claro via CSS.
 - [x] **Alterar favicon** — favicon SVG + PNG (32×32, 192×192, 512×512) com ícone do UltraNote.
+
+### App Android
+
+- [x] **App Android encapsulando o site em WebView** (`android/`, projeto Gradle/Kotlin separado
+  da solução .NET, `applicationId br.com.ultrasoftinc.ultranote`) — carrega
+  `https://www.ultrasoftinc.com.br/ultranote` direto. Cobre upload/download de anexos (seletor
+  de arquivo + `DownloadManager` repassando o cookie de sessão), botão voltar navega o
+  histórico da página antes de sair do app, puxar-para-atualizar, ícone reaproveitado do
+  `icon-512.png`.
+  - [x] **Login Google dentro de WebView** — o Google bloqueia login numa WebView "genérica"
+    (erro `disallowed_useragent`); contornado removendo o marcador `; wv` do user-agent (prática
+    aceita, não é spoofing completo). Teve uma pegadinha: a primeira versão "sequestrava" a
+    janela de popup do login pra carregar na mesma WebView — quebrava o `window.close()` que o
+    fluxo do Google dispara ao terminar, deixando a tela travada (login já tinha funcionado,
+    só não voltava). Corrigido com um popup de verdade (`Dialog` com sua própria `WebView`,
+    fechado via `onCloseWindow`).
+  - [ ] **Build release assinado** — hoje só existe o `.apk` de debug (`assembleDebug`), instalado
+    via `adb`. Pra publicar na Play Store ou distribuir de verdade precisa gerar uma keystore de
+    release e configurar a assinatura no `app/build.gradle.kts`.
