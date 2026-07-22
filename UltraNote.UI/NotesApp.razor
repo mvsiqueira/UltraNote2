@@ -36,6 +36,14 @@
                 <i class="ti ti-search" aria-hidden="true"></i>
                 <input placeholder="Buscar notas…" value="@_query" @oninput="OnSearchInput" />
             </div>
+            @if (_readMode)
+            {
+                <button class="icon-btn mode-btn" title="Clique para editar" @onclick="EnterEditMode"><i class="ti ti-eye" aria-hidden="true"></i><span>Modo de leitura</span></button>
+            }
+            else
+            {
+                <button class="icon-btn mode-btn active" title="Clique para voltar a ler" @onclick="() => GuardUnsaved(EnterReadModeNow)"><i class="ti ti-edit" aria-hidden="true"></i><span>Modo de edição</span></button>
+            }
             <button class="icon-btn" title="Tema" @onclick="ToggleTheme"><i class="ti @(_theme == "dark" ? "ti-sun" : "ti-moon")" aria-hidden="true"></i></button>
             <button class="icon-btn" title="Sobre" @onclick="() => _showAbout = true"><i class="ti ti-info-circle" aria-hidden="true"></i></button>
             @TopBarUser
@@ -159,7 +167,7 @@
             {
                 <div class="editor-head">
                     <button class="icon-btn back-btn" title="Voltar" @onclick="() => GuardUnsaved(CloseMobileEditor)"><i class="ti ti-arrow-left" aria-hidden="true"></i></button>
-                    <input class="title-input" @bind="_title" @bind:event="oninput" />
+                    <input class="title-input" @bind="_title" @bind:event="oninput" readonly="@_readMode" />
                     @if (_selectedNote.IsFavorite)
                     {
                         <button class="icon-btn star-btn" title="Desfavoritar" @onclick="ToggleFavoriteCurrentNote">
@@ -175,10 +183,13 @@
                     <button class="icon-btn archive-btn @(_selectedNote.IsArchived ? "active" : "")" title="@(_selectedNote.IsArchived ? "Desarquivar" : "Arquivar")" @onclick="ToggleArchiveCurrentNote">
                         <i class="ti @(_selectedNote.IsArchived ? "ti-archive-off" : "ti-archive")" aria-hidden="true"></i>
                     </button>
-                    <button class="btn-accent" @onclick="SaveNote" disabled="@_saving">@(_saving ? "Salvando…" : _dirty ? "Salvar *" : "Salvar")</button>
+                    @if (!_readMode)
+                    {
+                        <button class="btn-accent" @onclick="SaveNote" disabled="@_saving">@(_saving ? "Salvando…" : _dirty ? "Salvar *" : "Salvar")</button>
+                    }
                 </div>
                 <div class="editor-meta">@_meta</div>
-                <RichTextEditor @ref="_editor" Html="@_selectedNote.ContentHtml" OnChanged="MarkDirty" NoteId="@_selectedNote.Id" OnAttachmentAdded="LoadAttachments" ExistingAttachments="_attachments" />
+                <RichTextEditor @ref="_editor" Html="@_selectedNote.ContentHtml" OnChanged="MarkDirty" NoteId="@_selectedNote.Id" OnAttachmentAdded="LoadAttachments" ExistingAttachments="_attachments" ReadOnly="_readMode" />
                 <div class="attachments-bar" @ref="_attBar">
                     <div class="attachments-header">
                         <i class="ti ti-paperclip" aria-hidden="true"></i>
@@ -187,10 +198,13 @@
                         {
                             <span class="attachments-count">@_attachments.Count</span>
                         }
-                        <label class="icon-btn att-add-btn" title="Anexar arquivo">
-                            <i class="ti ti-plus" aria-hidden="true"></i>
-                            <InputFile style="display:none" OnChange="AttachFiles" multiple accept="*/*" />
-                        </label>
+                        @if (!_readMode)
+                        {
+                            <label class="icon-btn att-add-btn" title="Anexar arquivo">
+                                <i class="ti ti-plus" aria-hidden="true"></i>
+                                <InputFile style="display:none" OnChange="AttachFiles" multiple accept="*/*" />
+                            </label>
+                        }
                     </div>
                     @if (_attachments.Count > 0)
                     {
@@ -201,7 +215,11 @@
                                     <i class="ti @FileIcon(att.ContentType)" aria-hidden="true"></i>
                                     <span class="att-name" title="@att.FileName">@att.FileName</span>
                                     <a class="icon-btn" href="@Api.GetAttachmentDownloadUrl(att.Id)" target="_blank" title="Baixar"><i class="ti ti-download" aria-hidden="true"></i></a>
-                                    <button class="icon-btn danger" title="Excluir anexo" @onclick="() => DeleteAttachment(att)"><i class="ti ti-trash" aria-hidden="true"></i></button>
+                                    @if (!_readMode)
+                                    {
+                                        <button class="icon-btn" title="Inserir link na nota" @onclick="() => InsertAttachmentLink(att)"><i class="ti ti-link" aria-hidden="true"></i></button>
+                                        <button class="icon-btn danger" title="Excluir anexo" @onclick="() => DeleteAttachment(att)"><i class="ti ti-trash" aria-hidden="true"></i></button>
+                                    }
                                 </div>
                             }
                         </div>
@@ -524,6 +542,15 @@
 
     private bool _showArchived;
     private int _archivedCount;
+
+    // Read mode is the app's default (see topbar toggle): title, body, and attachments are
+    // locked, and the editor's quick-format context menu stays out of the way of the browser's
+    // native text-selection/copy UI (see RichTextEditor's ReadOnly parameter and
+    // editor-src/main.js's setEditable) — this matters most on mobile, where a long-press for
+    // text selection fires the same DOM event a desktop right-click does.
+    private bool _readMode = true;
+    private void EnterEditMode() => _readMode = false;
+    private Task EnterReadModeNow() { _readMode = true; return Task.CompletedTask; }
 
     private CtxMenu? _ctx;
     private Func<Task>? _pendingAction;
@@ -1293,17 +1320,28 @@
     private async Task OpenAttachment(AttachmentDto att) =>
         await JS.InvokeVoidAsync("open", Api.GetAttachmentUrl(att.Id), "_blank");
 
-    private void OpenAttachmentMenu(AttachmentDto att, MouseEventArgs e) =>
+    private void OpenAttachmentMenu(AttachmentDto att, MouseEventArgs e)
+    {
+        // Every action in this menu (link, rename, delete) alters the note — none of it
+        // belongs in read mode.
+        if (_readMode) return;
         _attCtx = new AttachmentCtxMenu(e.ClientX, e.ClientY, att);
+    }
 
     private void CloseAttachmentMenu() => _attCtx = null;
 
     private async Task InsertAttachmentLinkFromCtx()
     {
-        if (_attCtx is null || _editor is null) return;
+        if (_attCtx is null) return;
         var att = _attCtx.Attachment;
         CloseAttachmentMenu();
-        await _editor.InsertAttachmentLinkAsync(Api.GetAttachmentDownloadUrl(att.Id), att.FileName);
+        await InsertAttachmentLink(att);
+    }
+
+    private async Task InsertAttachmentLink(AttachmentDto att)
+    {
+        if (_editor is null) return;
+        await _editor.InsertAttachmentLinkAsync(Api.GetAttachmentUrl(att.Id), att.FileName);
     }
 
     private async Task RenameAttachment()

@@ -408,6 +408,12 @@ export function attach(el, dotNetRef) {
                     return false;
                 },
                 contextmenu(view, event) {
+                    // Read-only mode (see setEditable below) always defers to the browser's own
+                    // text-selection/copy UI instead of the quick-format menu — this matters on
+                    // touch devices, where a long-press fires this same "contextmenu" event and
+                    // would otherwise swallow the native copy/select gesture.
+                    if (!view.editable) return false;
+
                     const target = event.target;
                     const cell = target?.closest?.("td, th");
                     const row = target?.closest?.("tr");
@@ -522,6 +528,14 @@ function get(el) {
 export function setHtml(el, html) {
     const editor = get(el);
     if (editor) editor.commands.setContent(html || "", false);
+}
+
+export function setEditable(el, editable) {
+    const editor = get(el);
+    // Second arg suppresses TipTap's default behavior of firing "update" (our onUpdate
+    // calls NotifyChanged) just from toggling editability — nothing about the note's
+    // content actually changed, so it shouldn't mark it dirty.
+    if (editor) editor.setEditable(editable, false);
 }
 
 export function getHtml(el) {

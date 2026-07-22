@@ -131,6 +131,9 @@ html, body {
   font-size: 17px;
 }
 .icon-btn:hover { background: var(--hover); color: var(--text); }
+.mode-btn { width: auto; gap: 6px; padding: 0 10px; font-size: 13px; font-weight: 500; }
+.mode-btn .ti { font-size: 16px; }
+.mode-btn.active { color: var(--accent); }
 
 .avatar {
   display: inline-flex;
