@@ -50,6 +50,7 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
     db.Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
+    FixLegacyAttachmentUrls(db);
 }
 
 if (app.Environment.IsDevelopment())
@@ -77,3 +78,52 @@ if (authOptions.Enabled)
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 app.Run();
+
+// Attachment/image links baked into a note's ContentHtml carry two kinds of now-fixed
+// mistakes from before today, both baked in permanently at insert time (there's no page
+// context later to fix them against, unlike freshly-generated links):
+//   1. An ABSOLUTE URL tied to whichever domain was current when inserted — see
+//      UltraNoteApiClient's attachmentUrlBase doc. Notes touched before the
+//      note-api.<domain> Cloudflare routes were retired (DEPLOY-QNAP.md's /ultranote
+//      migration) still carry that now-dead domain and 404.
+//   2. "Inserir link no texto" used to point at the download endpoint (?download=true,
+//      forces a save-file prompt) instead of the view one — links inserted before that
+//      changed still force a download instead of opening the file inline.
+// One-time, idempotent (nothing left to match once fixed) — rewrites (1) to the same
+// site-root-relative path new inserts use today (works under any of the 3 access domains)
+// and strips (2) so old links behave like new ones.
+static void FixLegacyAttachmentUrls(AppDbContext db)
+{
+    string[] legacyPrefixes =
+    [
+        "https://note-api.ultrasoft.app.br/api/attachments/",
+        "https://note-api.ultrasoftinc.com.br/api/attachments/",
+    ];
+    const string replacement = "/ultranote/api-note/api/attachments/";
+    const string downloadSuffix = "?download=true";
+
+    var candidates = db.Notes
+        .Where(n => EF.Functions.Like(n.ContentHtml, "%note-api.ultrasoft.app.br%")
+                 || EF.Functions.Like(n.ContentHtml, "%note-api.ultrasoftinc.com.br%")
+                 || EF.Functions.Like(n.ContentHtml, "%?download=true%"))
+        .ToList();
+
+    var fixedCount = 0;
+    foreach (var note in candidates)
+    {
+        var updated = note.ContentHtml;
+        foreach (var prefix in legacyPrefixes)
+            updated = updated.Replace(prefix, replacement);
+        updated = updated.Replace(downloadSuffix, "");
+        if (updated != note.ContentHtml)
+        {
+            note.ContentHtml = updated;
+            fixedCount++;
+        }
+    }
+    if (fixedCount > 0)
+    {
+        db.SaveChanges();
+        Console.WriteLine($"[UltraNote] Fixed legacy attachment URLs in {fixedCount} note(s).");
+    }
+}

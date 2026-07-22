@@ -5,7 +5,18 @@ using UltraNote.Core.Dtos;
 namespace UltraNote.Client;
 
 /// <summary>HttpClient-backed implementation of <see cref="IUltraNoteApi"/>.</summary>
-public class UltraNoteApiClient(HttpClient http) : IUltraNoteApi
+/// <param name="attachmentUrlBase">
+/// Prefix for attachment URLs embedded in note content (img src, download links) — see
+/// GetAttachmentUrl/GetAttachmentDownloadUrl. When the API is same-origin with the page
+/// (the production case: web and API share one domain under /ultranote/), pass a
+/// PATH-only prefix here (e.g. "/ultranote/api-note") so those links stay portable across
+/// all 3 access domains instead of baking in whichever one was current when a note was
+/// edited — an absolute link works until the browser needs to send the attachment session
+/// cookie cross-domain, which SameSite=Lax blocks (see GoogleAuth.CookieScheme).
+/// Leave null when the API is a genuinely different origin (local dev) — an absolute URL
+/// is required there, derived from <c>http.BaseAddress</c>.
+/// </param>
+public class UltraNoteApiClient(HttpClient http, string? attachmentUrlBase = null) : IUltraNoteApi
 {
     public async Task<IReadOnlyList<FolderDto>> GetFoldersAsync(CancellationToken ct = default) =>
         await http.GetFromJsonAsync<List<FolderDto>>("api/folders", ct) ?? [];
@@ -113,15 +124,13 @@ public class UltraNoteApiClient(HttpClient http) : IUltraNoteApi
     public async Task<byte[]> DownloadAttachmentBytesAsync(Guid attachmentId, CancellationToken ct = default) =>
         await http.GetByteArrayAsync($"api/attachments/{attachmentId}", ct);
 
-    public string GetAttachmentUrl(Guid attachmentId)
-    {
-        var baseUri = http.BaseAddress is null ? "" : http.BaseAddress.ToString().TrimEnd('/');
-        return $"{baseUri}/api/attachments/{attachmentId}";
-    }
+    private string AttachmentBase =>
+        attachmentUrlBase?.TrimEnd('/')
+        ?? (http.BaseAddress is null ? "" : http.BaseAddress.ToString().TrimEnd('/'));
 
-    public string GetAttachmentDownloadUrl(Guid attachmentId)
-    {
-        var baseUri = http.BaseAddress is null ? "" : http.BaseAddress.ToString().TrimEnd('/');
-        return $"{baseUri}/api/attachments/{attachmentId}?download=true";
-    }
+    public string GetAttachmentUrl(Guid attachmentId) =>
+        $"{AttachmentBase}/api/attachments/{attachmentId}";
+
+    public string GetAttachmentDownloadUrl(Guid attachmentId) =>
+        $"{AttachmentBase}/api/attachments/{attachmentId}?download=true";
 }

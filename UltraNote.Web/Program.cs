@@ -27,13 +27,21 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 // DEPLOY-QNAP.md.
 var currentUri = new Uri(builder.HostEnvironment.BaseAddress);
 string apiBaseUrl;
+// Path-only prefix for attachment URLs baked into note content (img src, download links) —
+// null unless the API is same-origin with the page, since only then is a path-only
+// reference (portable across all 3 access domains) valid instead of the absolute
+// http.BaseAddress fallback UltraNoteApiClient uses (required for local dev's different
+// origin). See UltraNoteApiClient's constructor doc for why this matters.
+string? attachmentUrlBase = null;
 if (currentUri.AbsolutePath.StartsWith("/ultranote/", StringComparison.OrdinalIgnoreCase))
 {
     apiBaseUrl = $"{builder.HostEnvironment.BaseAddress}api-note/";
+    attachmentUrlBase = new Uri(apiBaseUrl).AbsolutePath;
 }
 else if (currentUri.Host.EndsWith(".myqnapcloud.com", StringComparison.OrdinalIgnoreCase))
 {
     apiBaseUrl = $"{currentUri.GetLeftPart(UriPartial.Authority)}/api-note/";
+    attachmentUrlBase = new Uri(apiBaseUrl).AbsolutePath;
 }
 else
 {
@@ -51,6 +59,6 @@ builder.Services.AddScoped<BearerTokenHandler>();
 builder.Services.AddHttpClient("api", c => c.BaseAddress = new Uri(apiBaseUrl))
     .AddHttpMessageHandler<BearerTokenHandler>();
 builder.Services.AddScoped<IUltraNoteApi>(sp =>
-    new UltraNoteApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient("api")));
+    new UltraNoteApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient("api"), attachmentUrlBase));
 
 await builder.Build().RunAsync();
