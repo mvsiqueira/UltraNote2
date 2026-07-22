@@ -276,6 +276,23 @@ body.col-resize-cursor, body.col-resize-cursor * { cursor: col-resize !important
 /* ---------- Editor ---------- */
 .editor-panel { background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
 
+/* Wraps the RTE + attachments panel so the panel can dock either below the editor (default,
+   column) or to its right (row, toggled from the attachments header — see
+   ToggleAttachmentsPanelSide in NotesApp.razor). */
+.editor-body { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.editor-body.attachments-side { flex-direction: row; }
+.editor-body.attachments-side .rte { min-width: 0; }
+.editor-body.attachments-side .attachments-bar {
+  width: 280px;
+  flex-shrink: 0;
+  border-top: none;
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.editor-body.attachments-side .attachments-list { max-height: none; flex: 1; }
+
 .editor-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px 4px; }
 .back-btn { display: none; flex-shrink: 0; }
 .title-input {

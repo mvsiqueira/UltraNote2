@@ -189,45 +189,50 @@
                     }
                 </div>
                 <div class="editor-meta">@_meta</div>
-                <RichTextEditor @ref="_editor" Html="@_selectedNote.ContentHtml" OnChanged="MarkDirty" NoteId="@_selectedNote.Id" OnAttachmentAdded="LoadAttachments" ExistingAttachments="_attachments" ReadOnly="_readMode" />
-                <div class="attachments-bar" @ref="_attBar">
-                    <div class="attachments-header">
-                        <i class="ti ti-paperclip" aria-hidden="true"></i>
-                        <span>Anexos</span>
-                        @if (_attachments.Count > 0)
-                        {
-                            <span class="attachments-count">@_attachments.Count</span>
-                        }
-                        @if (!_readMode)
-                        {
-                            <label class="icon-btn att-add-btn" title="Anexar arquivo">
-                                <i class="ti ti-plus" aria-hidden="true"></i>
-                                <InputFile style="display:none" OnChange="AttachFiles" multiple accept="*/*" />
-                            </label>
-                        }
-                    </div>
-                    @if (_attachments.Count > 0)
-                    {
-                        <div class="attachments-list">
-                            @foreach (var att in _attachments)
+                <div class="editor-body @(_attachmentsPanelSide ? "attachments-side" : "")">
+                    <RichTextEditor @ref="_editor" Html="@_selectedNote.ContentHtml" OnChanged="MarkDirty" NoteId="@_selectedNote.Id" OnAttachmentAdded="LoadAttachments" ExistingAttachments="_attachments" ReadOnly="_readMode" />
+                    <div class="attachments-bar" @ref="_attBar">
+                        <div class="attachments-header">
+                            <i class="ti ti-paperclip" aria-hidden="true"></i>
+                            <span>Anexos</span>
+                            @if (_attachments.Count > 0)
                             {
-                                <div class="attachment-item" @ondblclick="() => OpenAttachment(att)" @oncontextmenu:preventDefault="true" @oncontextmenu="(e) => OpenAttachmentMenu(att, e)">
-                                    <i class="ti @FileIcon(att.ContentType)" aria-hidden="true"></i>
-                                    <span class="att-name" title="@att.FileName">@att.FileName</span>
-                                    <a class="icon-btn" href="@Api.GetAttachmentDownloadUrl(att.Id)" target="_blank" title="Baixar"><i class="ti ti-download" aria-hidden="true"></i></a>
-                                    @if (!_readMode)
-                                    {
-                                        <button class="icon-btn" title="Inserir link na nota" @onclick="() => InsertAttachmentLink(att)"><i class="ti ti-link" aria-hidden="true"></i></button>
-                                        <button class="icon-btn danger" title="Excluir anexo" @onclick="() => DeleteAttachment(att)"><i class="ti ti-trash" aria-hidden="true"></i></button>
-                                    }
-                                </div>
+                                <span class="attachments-count">@_attachments.Count</span>
+                            }
+                            <button class="icon-btn" title="@(_attachmentsPanelSide ? "Mover para baixo" : "Mover para o lado")" @onclick="ToggleAttachmentsPanelSide">
+                                <i class="ti @(_attachmentsPanelSide ? "ti-layout-bottombar" : "ti-layout-sidebar-right")" aria-hidden="true"></i>
+                            </button>
+                            @if (!_readMode)
+                            {
+                                <label class="icon-btn att-add-btn" title="Anexar arquivo">
+                                    <i class="ti ti-plus" aria-hidden="true"></i>
+                                    <InputFile style="display:none" OnChange="AttachFiles" multiple accept="*/*" />
+                                </label>
                             }
                         </div>
-                    }
-                    else
-                    {
-                        <p class="empty att-empty">Nenhum arquivo anexado.</p>
-                    }
+                        @if (_attachments.Count > 0)
+                        {
+                            <div class="attachments-list">
+                                @foreach (var att in _attachments)
+                                {
+                                    <div class="attachment-item" @ondblclick="() => OpenAttachment(att)" @oncontextmenu:preventDefault="true" @oncontextmenu="(e) => OpenAttachmentMenu(att, e)">
+                                        <i class="ti @FileIcon(att.ContentType)" aria-hidden="true"></i>
+                                        <span class="att-name" title="@att.FileName">@att.FileName</span>
+                                        <a class="icon-btn" href="@Api.GetAttachmentDownloadUrl(att.Id)" target="_blank" title="Baixar"><i class="ti ti-download" aria-hidden="true"></i></a>
+                                        @if (!_readMode)
+                                        {
+                                            <button class="icon-btn" title="Inserir link na nota" @onclick="() => InsertAttachmentLink(att)"><i class="ti ti-link" aria-hidden="true"></i></button>
+                                            <button class="icon-btn danger" title="Excluir anexo" @onclick="() => DeleteAttachment(att)"><i class="ti ti-trash" aria-hidden="true"></i></button>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="empty att-empty">Nenhum arquivo anexado.</p>
+                        }
+                    </div>
                 </div>
             }
             else if (!_treeSelectionIsNote && _selectedFolderId is not null)
@@ -542,6 +547,7 @@
 
     private bool _showArchived;
     private int _archivedCount;
+    private bool _attachmentsPanelSide;
 
     // Read mode is the app's default (see topbar toggle): title, body, and attachments are
     // locked, and the editor's quick-format context menu stays out of the way of the browser's
@@ -617,6 +623,8 @@
             if (savedFavVisible is not null) _favoritesVisible = savedFavVisible == "true";
             var savedShowArchived = await JS.InvokeAsync<string?>("localStorage.getItem", "ultranote_show_archived");
             if (savedShowArchived is not null) _showArchived = savedShowArchived == "true";
+            var savedAttSide = await JS.InvokeAsync<string?>("localStorage.getItem", "ultranote_attachments_side");
+            if (savedAttSide is not null) _attachmentsPanelSide = savedAttSide == "true";
             StateHasChanged();
         }
 
@@ -756,6 +764,12 @@
     {
         _showArchived = !_showArchived;
         await JS.InvokeVoidAsync("localStorage.setItem", "ultranote_show_archived", _showArchived ? "true" : "false");
+    }
+
+    private async Task ToggleAttachmentsPanelSide()
+    {
+        _attachmentsPanelSide = !_attachmentsPanelSide;
+        await JS.InvokeVoidAsync("localStorage.setItem", "ultranote_attachments_side", _attachmentsPanelSide ? "true" : "false");
     }
 
     public async Task ToggleFavorite(NoteSummaryDto note)
