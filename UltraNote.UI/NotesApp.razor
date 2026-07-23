@@ -189,8 +189,9 @@
                     }
                 </div>
                 <div class="editor-meta">@_meta</div>
-                <div class="editor-body @(_attachmentsPanelSide ? "attachments-side" : "")">
+                <div class="editor-body @(_attachmentsPanelSide ? "attachments-side" : "")" @ref="_editorBody">
                     <RichTextEditor @ref="_editor" Html="@_selectedNote.ContentHtml" OnChanged="MarkDirty" NoteId="@_selectedNote.Id" OnAttachmentAdded="LoadAttachments" ExistingAttachments="_attachments" ReadOnly="_readMode" />
+                    <div class="attachments-resize-handle" @ref="_attResizeHandle"></div>
                     <div class="attachments-bar" @ref="_attBar">
                         <div class="attachments-header">
                             <i class="ti ti-paperclip" aria-hidden="true"></i>
@@ -573,11 +574,22 @@
     private IJSObjectReference? _shortcutsJs;
     private IJSObjectReference? _dropZoneJs;
     private IJSObjectReference? _sidebarResizeJs;
+    private IJSObjectReference? _attResizeJs;
     private DotNetObjectReference<NotesApp>? _shortcutsRef;
     private ElementReference _attBar;
+    private ElementReference _attResizeHandle;
+    private ElementReference _editorBody;
     private ElementReference _bodyEl;
     private ElementReference _resizeHandle;
     private bool _dropZoneInitialized;
+
+    /// <summary>Tracks which dock mode the attachments-resize drag handle was last wired up
+    /// for. Null means "not currently bound" — set back to null in OnAfterRenderAsync
+    /// whenever the note editor unmounts (its underlying DOM element gets torn down and a
+    /// fresh one created the next time a note is opened, so the JS-side binding needs
+    /// redoing regardless of which code path caused the unmount); set to the current mode
+    /// once (re-)bound, so a mode toggle while a note stays open also triggers a rebind.</summary>
+    private bool? _lastAttachmentsResizeSide;
 
     /// <summary>Mobile only (see the "Mobile" section of ultranote.css): true switches the
     /// narrow layout from the folder tree to the full-screen editor. Ignored above the
@@ -606,6 +618,7 @@
             _shortcutsJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-shortcuts.js");
             _dropZoneJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-dropzone.js");
             _sidebarResizeJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-sidebar-resize.js");
+            _attResizeJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-attachments-resize.js");
             _downloadJs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/UltraNote.UI/ultranote-download.js");
             await _sidebarResizeJs.InvokeVoidAsync("init", _bodyEl, _resizeHandle);
             _shortcutsRef = DotNetObjectReference.Create(this);
@@ -639,6 +652,22 @@
             {
                 _dropZoneInitialized = false;
                 await _dropZoneJs.InvokeVoidAsync("dispose", _attBar);
+            }
+        }
+
+        if (_attResizeJs is not null)
+        {
+            if (_treeSelectionIsNote && _selectedNote is not null && _lastAttachmentsResizeSide != _attachmentsPanelSide)
+            {
+                if (_lastAttachmentsResizeSide is not null)
+                    await _attResizeJs.InvokeVoidAsync("dispose", _attResizeHandle);
+                await _attResizeJs.InvokeVoidAsync("init", _editorBody, _attResizeHandle, _attachmentsPanelSide);
+                _lastAttachmentsResizeSide = _attachmentsPanelSide;
+            }
+            else if ((!_treeSelectionIsNote || _selectedNote is null) && _lastAttachmentsResizeSide is not null)
+            {
+                await _attResizeJs.InvokeVoidAsync("dispose", _attResizeHandle);
+                _lastAttachmentsResizeSide = null;
             }
         }
     }
@@ -1674,6 +1703,11 @@
         {
             try { await _sidebarResizeJs.InvokeVoidAsync("dispose", _resizeHandle); } catch (JSDisconnectedException) { }
             try { await _sidebarResizeJs.DisposeAsync(); } catch (JSDisconnectedException) { }
+        }
+        if (_attResizeJs is not null)
+        {
+            try { if (_lastAttachmentsResizeSide is not null) await _attResizeJs.InvokeVoidAsync("dispose", _attResizeHandle); } catch (JSDisconnectedException) { }
+            try { await _attResizeJs.DisposeAsync(); } catch (JSDisconnectedException) { }
         }
         if (_downloadJs is not null)
         {
