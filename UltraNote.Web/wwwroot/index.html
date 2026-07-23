@@ -5,17 +5,13 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>UltraNote</title>
+    <!-- Prod (todos os 3 domínios) serve sob /ultranote/; dev local serve na raiz. O nginx
+         de produção reescreve o href abaixo pra "/ultranote/" na própria resposta (ver
+         sub_filter em nginx.conf) — nada de JS tentando corrigir isso depois: o preload
+         scanner do navegador começa a buscar os recursos referenciados no HTML antes mesmo
+         de um <script> inline rodar, então um fix client-side perde a corrida em alguns
+         carregamentos. -->
     <base href="/" />
-    <script>
-        // Produção serve o app sob /ultranote/ (mesmo prefixo nos 3 domínios); dev local
-        // serve na raiz. Precisa rodar ANTES dos <link>/<script> abaixo, que resolvem
-        // contra o <base> na ordem em que o HTML é parseado.
-        (function () {
-            if (location.pathname.indexOf('/ultranote/') === 0 || location.pathname === '/ultranote') {
-                document.querySelector('base').setAttribute('href', '/ultranote/');
-            }
-        })();
-    </script>
     <link rel="preload" id="webassembly" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css" />
     <link rel="stylesheet" href="_content/UltraNote.UI/ultranote.css" />
