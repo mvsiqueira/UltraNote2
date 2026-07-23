@@ -5,17 +5,7 @@
 <div class="app">
     <header class="topbar">
         <span class="brand">
-            <svg class="brand-logo" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <rect class="bl-bg"   width="200" height="200" rx="38"/>
-                <path class="bl-page" d="M50,36 L124,36 L150,62 L150,168 L50,168 Z"/>
-                <path class="bl-fold" d="M124,36 L150,62 L124,62 Z"/>
-                <rect class="bl-line" x="66" y="84"  width="60" height="7" rx="3.5"/>
-                <rect class="bl-line" x="66" y="100" width="68" height="7" rx="3.5"/>
-                <rect class="bl-line" x="66" y="116" width="52" height="7" rx="3.5"/>
-                <rect class="bl-line" x="66" y="132" width="64" height="7" rx="3.5"/>
-                <rect class="bl-line" x="66" y="148" width="44" height="7" rx="3.5"/>
-                <path fill="#C89B3C" d="M150,100 C154,127 173,146 200,150 C173,154 154,173 150,200 C146,173 127,154 100,150 C127,146 146,127 150,100Z"/>
-            </svg>
+            <img class="brand-logo" src="_content/UltraNote.UI/brand-logo.svg" alt="" aria-hidden="true" />
             UltraNote
         </span>
 
@@ -171,7 +161,7 @@
                     @if (_selectedNote.IsFavorite)
                     {
                         <button class="icon-btn star-btn" title="Desfavoritar" @onclick="ToggleFavoriteCurrentNote">
-                            <svg class="star-filled-svg" style="color:#C89B3C" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.243 7.34l-6.38.925-.113.023a1 1 0 0 0-.44 1.684l4.622 4.499-1.09 6.355-.013.11a1 1 0 0 0 1.464.944l5.706-3 5.693 3 .1.046a1 1 0 0 0 1.352-1.1l-1.091-6.355 4.624-4.5.078-.085a1 1 0 0 0-.633-1.62l-6.38-.926-2.852-5.78a1 1 0 0 0-1.794 0l-2.853 5.78z"/></svg>
+                            <svg class="star-filled-svg" style="color:#FFC107" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.243 7.34l-6.38.925-.113.023a1 1 0 0 0-.44 1.684l4.622 4.499-1.09 6.355-.013.11a1 1 0 0 0 1.464.944l5.706-3 5.693 3 .1.046a1 1 0 0 0 1.352-1.1l-1.091-6.355 4.624-4.5.078-.085a1 1 0 0 0-.633-1.62l-6.38-.926-2.852-5.78a1 1 0 0 0-1.794 0l-2.853 5.78z"/></svg>
                         </button>
                     }
                     else
