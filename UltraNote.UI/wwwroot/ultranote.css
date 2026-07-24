@@ -67,6 +67,7 @@ html, body {
 .brand { display: flex; align-items: center; gap: 5px; font-weight: 600; font-size: 17px; }
 .brand .ti { color: var(--accent); font-size: 18px; }
 .brand-logo { width: 32px; height: 32px; flex-shrink: 0; }
+.ultrasoft-logo { width: 32px; height: 32px; flex-shrink: 0; }
 
 .breadcrumb {
   display: flex;
@@ -780,6 +781,10 @@ body.row-resize-cursor, body.row-resize-cursor * { cursor: row-resize !important
   .body.mobile-editor-open .editor-panel { display: flex; }
 
   .back-btn { display: inline-flex; }
+
+  /* No room for the "Modo de leitura"/"Modo de edição" label next to search/theme/about —
+     icon only, matching the other topbar buttons. */
+  .mode-btn span { display: none; }
 
   /* Bigger tap targets everywhere touch is involved. */
   .icon-btn { width: 40px; height: 40px; font-size: 19px; }
