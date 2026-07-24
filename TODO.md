@@ -11,11 +11,33 @@ Itens concluídos vivem em "Já entregue", no final do arquivo.
   toda até abrir uma nota, que vira editor em tela cheia com botão "Voltar" (que passa pelo
   aviso de alterações não salvas, igual trocar de nota). Toolbars com alvos de toque maiores
   e a do editor rico com scroll horizontal. Recarregar a página restaura a nota selecionada
-  (destacada na árvore) sem abrir o editor automaticamente. Duas pegadinhas de layout que
-  vale lembrar: input dentro de flexbox não encolhe sem `min-width: 0` (`.title-input`
-  empurrava os botões de favoritar/arquivar/salvar pra fora da tela); e uma única coluna de
-  grid (`1fr`) tem o mesmo problema — precisa de `minmax(0, 1fr)`, senão o grid não encolhe
-  abaixo do conteúdo mínimo (`.body` ficava mais largo que a viewport, sem scroll visível).
+  (destacada na árvore) sem abrir o editor automaticamente. Botão de modo leitura/edição no
+  topbar perde o texto abaixo de 768px, só ícone, igual os outros botões dessa faixa. Duas
+  pegadinhas de layout que vale lembrar: input dentro de flexbox não encolhe sem
+  `min-width: 0` (`.title-input` empurrava os botões de favoritar/arquivar/salvar pra fora da
+  tela); e uma única coluna de grid (`1fr`) tem o mesmo problema — precisa de
+  `minmax(0, 1fr)`, senão o grid não encolhe abaixo do conteúdo mínimo (`.body` ficava mais
+  largo que a viewport, sem scroll visível).
+- [x] **Modo leitura / edição** — app abre em modo leitura por padrão: título, corpo e anexos
+  travados, toolbar do editor some, e o menu de formatação (clique direito/toque longo) nunca
+  intercepta a seleção nativa de texto nesse modo — depende só de `editor.isEditable`, não de
+  detectar toque vs. mouse (a tentativa anterior com detecção de toque era inconsistente entre
+  navegadores). Botão no topbar alterna os modos, com o aviso de alterações não salvas de
+  sempre ao sair do modo edição. Pegadinha: `editor.setEditable()` do TipTap dispara o evento
+  de "mudança" por padrão mesmo só trocando o modo — suprimido (`emitUpdate = false`) pra não
+  marcar a nota como suja sem motivo.
+- [x] **Painel de anexos: mover pra lateral + redimensionar** — botão no cabeçalho do painel
+  alterna entre embaixo do editor (padrão) e à direita; preferência e tamanho (largura na
+  lateral, altura embaixo) persistidos em localStorage, mesma técnica de arrastar do painel
+  esquerdo. Pegadinha: a variável CSS do tamanho precisa ficar no elemento **pai** que o
+  painel e a alça de arrastar compartilham — variável CSS só herda de pai pra filho, então
+  botar no painel sozinho deixava a alça (irmã, não filha) sempre no tamanho padrão do CSS,
+  sem acompanhar o redimensionamento real (só parecia certo por coincidência antes do
+  primeiro resize).
+- [x] **Link de anexo inserido no texto abre em modo de exibição**, não força mais download;
+  painel de anexos ganhou um botão de inserir link direto (antes só dava pelo menu de
+  contexto). Notas com links antigos (gravados antes dessas mudanças) foram corrigidas por
+  uma migração única na inicialização da API (ver nota sobre URLs de anexo abaixo).
 
 ## 2. Multiusuário (segregação de dados)
 
@@ -43,15 +65,29 @@ Itens concluídos vivem em "Já entregue", no final do arquivo.
 
 - [x] **Unificar o UltraNote em `/ultranote` nos 3 domínios** (`www.ultrasoft.app.br`,
   `www.ultrasoftinc.com.br`, `groo.myqnapcloud.com:8443`), com `www`/raiz reservado pro site
-  institucional (`app-www`). Base href dinâmico via script inline no `index.html` (detecta
-  `/ultranote/` no `location.pathname` antes de carregar o Blazor — resolveu a "pegadinha"
-  que estava anotada aqui). `Program.cs` deriva a URL da API de forma única (mesma origem +
+  institucional (`app-www`). `Program.cs` deriva a URL da API de forma única (mesma origem +
   `/ultranote/api-note/`), com fallback só pro myQNAPcloud raiz (sem prefixo). Rotas
   Cloudflare: hostname `www.<domínio>`, path `^/ultranote` (regex — cuidado, não é glob) —
-  **precisa vir antes** da rota catch-all pro `app-www` no mesmo hostname (Cloudflare casa
-  a primeira rota que bater, não a mais específica).
+  **precisa vir antes** da rota catch-all pro `app-www` no mesmo hostname (Cloudflare avalia
+  as rotas de cima pra baixo, a primeira que bater vence, não é "mais específica vence").
   - [x] **Aposentar as rotas antigas** — `note.*`/`note-api.*` removidas do Cloudflare, e o
     branch de fallback correspondente removido do `Program.cs`.
+  - [x] **`<base href>` corrigido no nginx, não mais em JS** — a primeira versão ajustava o
+    `<base href>` do `index.html` pra `/ultranote/` via um `<script>` inline rodando antes dos
+    `<link>`/`<script>` seguintes. Não é garantia: o preload scanner do navegador (a
+    otimização que busca recursos referenciados no HTML antes mesmo de rodar scripts da
+    página) pode vencer a corrida e pedir tudo na raiz do domínio em cargas frias, gerando 404
+    em cascata. Trocado por um `sub_filter` no nginx que reescreve o `<base href>` na própria
+    resposta HTML (usando `$request_uri`, que reflete o caminho original mesmo depois do
+    `rewrite` que tira o prefixo `/ultranote/`) — chega certo desde o primeiro byte, sem
+    depender de JS nenhum. Testado com um nginx real rodando localmente (Docker/WSL não
+    disponíveis nessa máquina; build oficial do nginx.org pra Windows resolveu).
+  - [x] **Cache do Cloudflare/navegador pode segurar o `index.html` antigo** — sem
+    `Cache-Control`, um deploy novo pode ficar invisível pra quem já visitou (aponta pra
+    `_framework/*` com hash antigo, chamadas de API com URL aposentada, etc.), sem erro
+    visível além de "está estranho". `nginx.conf` manda `no-store` no `index.html`; se ainda
+    assim persistir depois de um deploy nas 3 URLs de produção, purgar o cache do Cloudflare
+    (Caching → Configuration → Purge Everything) resolve o que já ficou preso na borda.
 - [ ] **Servir mais de um app via myQNAPcloud** — hoje `groo.myqnapcloud.com:8443` inteiro
   aponta só pro `app-note-web` (o proxy reverso do QTS não divide por caminho, só host+porta),
   então nem o `app-www` aparece lá. Sem necessidade concreta agora (não tem outro app pra
@@ -145,11 +181,33 @@ Itens concluídos vivem em "Já entregue", no final do arquivo.
   - [x] Chave de Data Protection persistida em `/data/keys` (mesmo volume do SQLite) — sem isso, toda recriação do container trocava a chave e invalidava todo cookie já emitido.
   - [x] Web deriva o endereço da API a partir do próprio host da página (`note.X` → `note-api.X`) em vez de um endereço fixo — mantém web e API sempre no mesmo domínio, necessário pro `SameSite=Lax` funcionar em qualquer um dos dois domínios de produção.
 - [x] **Acesso via myQNAPcloud** (`groo.myqnapcloud.com:8443`) — alternativa pra quando os domínios de produção estão bloqueados (rede corporativa). Web e API na mesma origem (porta única): o nginx do `app-note-web` repassa `/api-note/*` internamente pra `app-note-api:8080`, então nem CORS é necessário. Chegamos nisso depois de testar com uma segunda porta dedicada pra API e o proxy da empresa bloquear o `CONNECT` nela — proxies corporativos costumam só liberar túnel HTTPS pra portas "conhecidas". Certificado ainda é o autoassinado do QNAP (aviso "não seguro", mas funciona); solução definitiva com Caddy + Let's Encrypt fica pendente (ver Infra/Deploy).
+- [x] **Links de anexo (imagem/arquivo inserido no texto) agora relativos ao domínio**, não
+  mais absolutos — `GetAttachmentUrl`/`GetAttachmentDownloadUrl` geram um caminho relativo
+  quando API e web estão na mesma origem (todo caso de produção hoje). Antes, o link ficava
+  gravado com o domínio de quem editou a nota; se ela fosse aberta depois num *outro* dos 3
+  domínios de acesso, o cookie de sessão do anexo (escopo por origem) não valia lá, quebrando
+  a imagem — mesmo que o domínio antigo continuasse no ar. Notas com links já gravados com um
+  domínio aposentado (`note-api.<domínio>`, de antes da migração pro `/ultranote`) foram
+  corrigidas por uma rotina única e idempotente na inicialização da API, que reescreve o
+  `ContentHtml` das notas afetadas.
 
 ### Visual / Identidade
 
-- [x] **Alterar logo** — ícone SVG inline no brand do topbar (papel com dobra + sparkle dourado Ultrasoft); tema escuro/claro via CSS.
-- [x] **Alterar favicon** — favicon SVG + PNG (32×32, 192×192, 512×512) com ícone do UltraNote.
+- [x] **Novo logo dourado** (export do Claude Design, pasta `dourado/ultranote`) — favicon,
+  ícones PWA/apple-touch-icon e launcher do Android gerados a partir do PNG de 128px (maior
+  disponível; `icon-512.png` fica um pouco ampliado, mas ok pro design simples que é). Logo
+  do topbar usa o SVG vetorial de verdade que veio no export (glifo com gradiente + máscara),
+  substituindo o SVG desenhado à mão que tinha antes (removido junto o CSS de recoloração por
+  tema, que só fazia sentido pro design anterior); `favicon.svg` antigo também removido, sem
+  fonte vetorial equivalente pro logo novo. Testamos colocar o sparkle da Ultrasoft (marca-mãe,
+  `dourado/ultrasoft/ultrasoft-sparkle.svg`) do lado do logo no topbar e sozinho no lugar
+  dele — nenhum dos dois ficou bom; o SVG fica preparado em `UltraNote.UI/wwwroot/` sem uso,
+  esperando um lugar melhor pra ele aparecer.
+- [x] **Estrelas de favorito em amarelo** (`#FFC107`, era `#C89B3C`) — o dourado do logo novo
+  brigava visualmente com o dourado que as estrelas usavam. O botão de arquivadas, que
+  compartilhava a mesma regra CSS de "ativo" com o de favoritos, passa a usar a cor de
+  destaque padrão do app em vez do dourado — eram duas coisas diferentes usando a mesma cor
+  sem necessidade.
 
 ### App Android
 
@@ -169,3 +227,9 @@ Itens concluídos vivem em "Já entregue", no final do arquivo.
   - [ ] **Build release assinado** — hoje só existe o `.apk` de debug (`assembleDebug`), instalado
     via `adb`. Pra publicar na Play Store ou distribuir de verdade precisa gerar uma keystore de
     release e configurar a assinatura no `app/build.gradle.kts`.
+  - [x] **Insets do Android 15 (edge-to-edge)** — `targetSdk 35` tornou edge-to-edge o padrão;
+    sem tratar isso, a WebView desenhava por baixo da barra de status e da barra de navegação
+    (conteúdo escondido atrás delas) **e** um gesto de arrastar perto do topo da tela era
+    capturado pelo "puxar para notificações" do sistema em vez de chegar na página, já que não
+    sobrava margem nenhuma separando os dois. Corrigido aplicando o padding das window insets
+    (`ViewCompat.setOnApplyWindowInsetsListener`) no layout raiz.
