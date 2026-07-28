@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.os.Message
+import android.view.MotionEvent
 import android.webkit.CookieManager
 import android.webkit.URLUtil
 import android.webkit.ValueCallback
@@ -179,6 +180,21 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // SwipeRefreshLayout only knows how to check whether the WebView's own top-level
+        // page is scrolled to the top, but this app's scrolling happens in CSS-level nested
+        // divs (the note tree, the note body) — the page itself never scrolls. Left always
+        // enabled, it thinks a refresh gesture is valid at any time and grabs every downward
+        // drag, even ones meant to scroll inside the note. Instead, only arm it for drags
+        // that start within the topbar's own height — that strip has no scrolling of its
+        // own, so a pull starting there can't be mistaken for one meant to scroll a note.
+        swipeRefresh.isEnabled = false
+        val refreshZonePx = (56 * resources.displayMetrics.density).toInt()
+        webView.setOnTouchListener { _, event ->
+            if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                swipeRefresh.isEnabled = event.y <= refreshZonePx
+            }
+            false
+        }
         swipeRefresh.setOnRefreshListener { webView.reload() }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
