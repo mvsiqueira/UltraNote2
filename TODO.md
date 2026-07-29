@@ -208,6 +208,18 @@ Itens concluídos vivem em "Já entregue", no final do arquivo.
   compartilhava a mesma regra CSS de "ativo" com o de favoritos, passa a usar a cor de
   destaque padrão do app em vez do dourado — eram duas coisas diferentes usando a mesma cor
   sem necessidade.
+- [x] **Título "UltraNote" no topbar em dourado + fonte Poppins** — cor um pouco mais escura
+  (`#C4892C`) que o dourado do logo, pra legibilidade em texto pequeno. Fonte escolhida por
+  comparação visual (Artifact com preview lado a lado de 4 opções — Poppins, Playfair Display,
+  Space Grotesk, Fraunces — já que descrever fontes em texto não ajuda a decidir), carregada
+  via Google Fonts (mesmo padrão de CDN já usado pros ícones Tabler).
+- [x] **Splash screen animado** — trocado o texto estático "UltraNote" (que usava a cor de
+  destaque genérica do app) pelo logo animado do export `dourado/ultranote/ultranote-splash.html`:
+  o mesmo glifo SVG do topbar (gradiente + máscara) flutuando em loop (`translateY`) ao lado do
+  wordmark em Poppins dourado, com 4 sparkles piscando em delays escalonados ao redor do glifo.
+  Escala geral ajustada com `transform: scale()` no contêiner (mesma técnica do export original)
+  pra ficar mais proeminente. Respeita `prefers-reduced-motion` (desliga as animações pra quem
+  pediu menos movimento no sistema).
 
 ### App Android
 
@@ -233,3 +245,11 @@ Itens concluídos vivem em "Já entregue", no final do arquivo.
     capturado pelo "puxar para notificações" do sistema em vez de chegar na página, já que não
     sobrava margem nenhuma separando os dois. Corrigido aplicando o padding das window insets
     (`ViewCompat.setOnApplyWindowInsetsListener`) no layout raiz.
+  - [x] **Puxar-para-atualizar só na faixa do topbar** — depois do fix de insets acima, o
+    `SwipeRefreshLayout` passou a capturar qualquer arrasto pra baixo, inclusive os que deveriam
+    rolar o conteúdo da nota. A página em si nunca rola (quem rola são `div`s internas com
+    `overflow-y: auto`), então o `canChildScrollUp()` do SwipeRefreshLayout não tem como saber
+    se dá pra rolar ali dentro ou não — ele sempre acha que pode. Resolvido restringindo o
+    refresh a arrastos que começam dentro da faixa do topbar (56dp, que não tem rolagem
+    própria), via `setOnTouchListener` observando `ACTION_DOWN` e ligando/desligando
+    `swipeRefresh.isEnabled` conforme a posição Y do toque.
