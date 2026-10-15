@@ -20,6 +20,13 @@ public class AuthOptions
 
     /// <summary>Only these e-mails may use the API.</summary>
     public string[] AllowedEmails { get; set; } = [];
+
+    /// <summary>
+    /// How long the session cookie keeps the user logged in (sliding). Google ID tokens only
+    /// last ~1h and silent re-issue is unreliable, so this cookie is what makes a login
+    /// "stick" across visits. The allowlist is still checked on every request.
+    /// </summary>
+    public int SessionDays { get; set; } = 30;
 }
 
 public static class GoogleAuth
@@ -30,7 +37,9 @@ public static class GoogleAuth
     /// Cookie scheme used only so attachment URLs embedded directly in note HTML
     /// (&lt;img src&gt;, &lt;a href&gt;) can authenticate — those requests are plain
     /// browser resource loads that never carry the app's Bearer token. Minted by
-    /// POST /api/auth/session once the client already holds a valid Bearer token.
+    /// POST /api/auth/session once the client already holds a valid Bearer token. It also
+    /// doubles as the persistent login: the web app restores its session from it via
+    /// GET /api/auth/me when the cached Google ID token has expired.
     /// </summary>
     public const string CookieScheme = "AttachmentCookie";
 
@@ -60,7 +69,7 @@ public static class GoogleAuth
                 cookie.Cookie.HttpOnly = true;
                 cookie.Cookie.SameSite = SameSiteMode.Lax;
                 cookie.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-                cookie.ExpireTimeSpan = TimeSpan.FromHours(24);
+                cookie.ExpireTimeSpan = TimeSpan.FromDays(Math.Max(1, options.SessionDays));
                 cookie.SlidingExpiration = true;
                 // API only — never redirect to an HTML login page, just fail with the status code.
                 cookie.Events.OnRedirectToLogin = ctx =>

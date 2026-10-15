@@ -8,8 +8,10 @@
 }
 else
 {
+    @* Card stays in the DOM while initializing (the Google button mounts into it) but is
+       hidden, so a returning user with a cached/cookie session never sees a login flash. *@
     <div class="login-screen">
-        <div class="login-card">
+        <div class="login-card" style="@(Auth.Initializing ? "visibility:hidden" : null)">
             <i class="ti ti-notebook" aria-hidden="true"></i>
             <h1>UltraNote</h1>
             @if (Auth.AccessDenied)

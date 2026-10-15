@@ -104,6 +104,15 @@ Itens concluídos vivem em "Já entregue", no final do arquivo.
 - [ ] Automatizar o fluxo de atualização (script: copiar p/ NAS → `docker run ... publish` → recriar app).
 - [ ] **Backup** automatizado de `/share/Container/ultranote-data` e `/ultranote-assets` (nível NAS — complementa o backup/restore manual já disponível no app, ver "Já entregue").
 - [ ] (Dev) Decidir se o `appsettings.json` local fica **sem** `GoogleClientId` (dev sem login, mais ágil) — produção continua protegida.
+- [ ] **Vulnerabilidade em dependência da API** — `dotnet build`/`restore` de `UltraNote.Api`
+  avisa (NU1902 moderada + NU1903 alta) sobre `System.Security.Cryptography.Pkcs` 9.0.0,
+  que entra como dependência **transitiva** (nenhum `PackageReference` direto). Avisos:
+  [GHSA-846f-f764-76mx](https://github.com/advisories/GHSA-846f-f764-76mx) (alta) e
+  [GHSA-2fmv-rv2c-59x7](https://github.com/advisories/GHSA-2fmv-rv2c-59x7) (moderada).
+  Pra tratar: descobrir quem puxa o pacote (`dotnet nuget why UltraNote.Api System.Security.Cryptography.Pkcs`),
+  e ou atualizar o pacote pai, ou fixar uma versão corrigida com um `PackageReference` direto.
+  Avaliar também o impacto real (o pacote lida com CMS/PKCS#7, provavelmente via validação de
+  token/Data Protection) — pode ser baixo, mas o aviso some de qualquer jeito com a atualização.
 - [ ] Testes automatizados (API: endpoints; UI: componentes principais).
 - [ ] Healthcheck de container / monitor de uptime.
 - [ ] App Windows (desktop): `UltraNote.Desktop` — MAUI Blazor Hybrid (ver §4).
@@ -180,6 +189,15 @@ Itens concluídos vivem em "Já entregue", no final do arquivo.
 - [x] **Cookie de sessão para anexos** — `<img src>`/`<a href>` embutidos na nota não carregam o Bearer token (requisição crua do navegador). `POST /api/auth/session` (chamado a cada login/renovação de token) planta um cookie `HttpOnly; Secure; SameSite=Lax` (esquema `AttachmentCookie`, expira em 24h com renovação deslizante) que a API aceita como alternativa ao Bearer em qualquer endpoint. Revogável trocando a chave de Data Protection — ao contrário do GUID público que era usado antes.
   - [x] Chave de Data Protection persistida em `/data/keys` (mesmo volume do SQLite) — sem isso, toda recriação do container trocava a chave e invalidava todo cookie já emitido.
   - [x] Web deriva o endereço da API a partir do próprio host da página (`note.X` → `note-api.X`) em vez de um endereço fixo — mantém web e API sempre no mesmo domínio, necessário pro `SameSite=Lax` funcionar em qualquer um dos dois domínios de produção.
+- [x] **Login persistente (30 dias)** — o ID token do Google dura ~1h e a renovação silenciosa
+  (One Tap) falha com frequência, então reabrir o site pedia login de novo. Agora o cookie de
+  sessão da API (`un_session`, antes só pra anexos, 24h) dura 30 dias com renovação deslizante
+  (`Auth:SessionDays`) e vira o login persistente: ao abrir, a web tenta o token em cache, depois
+  `GET /api/auth/me` pelo cookie; só carrega o GIS depois disso. A allowlist continua checada em
+  toda requisição (tirar um e-mail derruba o acesso mesmo com cookie válido). "Sair" chama
+  `POST /api/auth/logout` pra apagar o cookie, senão o próximo carregamento logaria de novo; um
+  401 numa sessão só de cookie devolve pra tela de login. A tela de login não pisca mais durante
+  a verificação (card fica no DOM, escondido, porque o botão do Google monta dentro dele).
 - [x] **Acesso via myQNAPcloud** (`groo.myqnapcloud.com:8443`) — alternativa pra quando os domínios de produção estão bloqueados (rede corporativa). Web e API na mesma origem (porta única): o nginx do `app-note-web` repassa `/api-note/*` internamente pra `app-note-api:8080`, então nem CORS é necessário. Chegamos nisso depois de testar com uma segunda porta dedicada pra API e o proxy da empresa bloquear o `CONNECT` nela — proxies corporativos costumam só liberar túnel HTTPS pra portas "conhecidas". Certificado ainda é o autoassinado do QNAP (aviso "não seguro", mas funciona); solução definitiva com Caddy + Let's Encrypt fica pendente (ver Infra/Deploy).
 - [x] **Links de anexo (imagem/arquivo inserido no texto) agora relativos ao domínio**, não
   mais absolutos — `GetAttachmentUrl`/`GetAttachmentDownloadUrl` geram um caminho relativo

@@ -26,7 +26,17 @@ public class GoogleAuthService(IJSRuntime js, IConfiguration config, IHttpClient
     public string? IdToken { get; private set; }
     public string? Email { get; private set; }
     public string? Name { get; private set; }
-    public bool IsAuthenticated => !IsEnabled || IdToken is not null;
+
+    /// <summary>
+    /// Logged in through the API's session cookie alone (no live Google ID token) — the
+    /// persistent-login path used when the cached token has expired.
+    /// </summary>
+    public bool HasCookieSession { get; private set; }
+
+    public bool IsAuthenticated => !IsEnabled || IdToken is not null || HasCookieSession;
+
+    /// <summary>True until InitAsync has decided whether a login is needed — keeps the login screen from flashing on load.</summary>
+    public bool Initializing { get; private set; } = true;
 
     /// <summary>True when the last sign-in attempt used a Google account not on the API's allowlist.</summary>
     public bool AccessDenied { get; private set; }
@@ -34,20 +44,78 @@ public class GoogleAuthService(IJSRuntime js, IConfiguration config, IHttpClient
 
     public event Action? OnChange;
 
-    /// <summary>Loads GIS, wires the callback, and restores a still-valid cached token (no UI).</summary>
+    /// <summary>
+    /// Restores the session without UI, trying in order: a still-valid cached Google token,
+    /// then the API's session cookie (30-day persistent login). GIS is only loaded after
+    /// that, so a slow/blocked Google script never delays or breaks an already-valid session.
+    /// </summary>
     public async Task InitAsync()
     {
-        if (!IsEnabled) return;
+        if (!IsEnabled) { Initializing = false; return; }
         _module ??= await js.InvokeAsync<IJSObjectReference>("import", "./google-auth.js");
         _selfRef ??= DotNetObjectReference.Create(this);
-        if (!_gisInited)
-        {
-            await _module.InvokeVoidAsync("init", _selfRef, ClientId, true);
-            _gisInited = true;
-        }
 
         var stored = await _module.InvokeAsync<string?>("getStored");
         if (!string.IsNullOrEmpty(stored)) await UseToken(stored);
+        if (IdToken is null) await TryRestoreCookieSessionAsync();
+
+        if (IsAuthenticated)
+        {
+            Initializing = false;
+            OnChange?.Invoke();
+        }
+
+        if (!_gisInited)
+        {
+            try
+            {
+                await _module.InvokeVoidAsync("init", _selfRef, ClientId, true);
+                _gisInited = true;
+            }
+            catch when (IsAuthenticated)
+            {
+                // Already logged in via cookie; GIS is only needed for a later silent refresh.
+            }
+        }
+
+        Initializing = false;
+        OnChange?.Invoke();
+    }
+
+    // The cached ID token is gone/expired, but the API's session cookie may still be good.
+    private async Task TryRestoreCookieSessionAsync()
+    {
+        try
+        {
+            var client = httpFactory.CreateClient("api");
+            var req = new HttpRequestMessage(HttpMethod.Get, "api/auth/me");
+            req.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
+            var res = await client.SendAsync(req);
+            if (!res.IsSuccessStatusCode) return;
+
+            using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+            var root = doc.RootElement;
+            Email = root.TryGetProperty("email", out var e) ? e.GetString() : null;
+            Name = root.TryGetProperty("name", out var n) ? n.GetString() : null;
+            HasCookieSession = true;
+        }
+        catch
+        {
+            // Offline / API down: fall through to the normal login screen.
+        }
+    }
+
+    /// <summary>
+    /// An API call came back 401 while we only had the cookie: it expired or was revoked
+    /// (or the account left the allowlist). Drop back to the login screen.
+    /// </summary>
+    public void OnSessionRejected()
+    {
+        if (!HasCookieSession || IdToken is not null) return;
+        HasCookieSession = false;
+        Email = null;
+        Name = null;
+        OnChange?.Invoke();
     }
 
     /// <summary>Shows the sign-in button and tries a silent auto-select sign-in.</summary>
@@ -64,7 +132,20 @@ public class GoogleAuthService(IJSRuntime js, IConfiguration config, IHttpClient
     public async Task SignOutAsync()
     {
         _refreshCts?.Cancel();
+
+        // Drop the server-side session cookie too, otherwise the next load would just log
+        // straight back in from it. Best effort — local state is cleared regardless.
+        try
+        {
+            var client = httpFactory.CreateClient("api");
+            var req = new HttpRequestMessage(HttpMethod.Post, "api/auth/logout");
+            req.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
+            await client.SendAsync(req);
+        }
+        catch { }
+
         IdToken = null;
+        HasCookieSession = false;
         Email = null;
         Name = null;
         AccessDenied = false;

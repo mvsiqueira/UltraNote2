@@ -10,6 +10,11 @@ public class BearerTokenHandler(GoogleAuthService auth) : DelegatingHandler
     {
         if (!string.IsNullOrEmpty(auth.IdToken))
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", auth.IdToken);
-        return await base.SendAsync(request, cancellationToken);
+        var response = await base.SendAsync(request, cancellationToken);
+
+        // Cookie-only session (no live Google token) rejected: expired/revoked — back to login.
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            auth.OnSessionRejected();
+        return response;
     }
 }
