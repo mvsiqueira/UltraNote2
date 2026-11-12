@@ -2,6 +2,11 @@
 
 Lista de comandos de terminal, úteis para o desenvolvimento do app
 
+## Conectar no QNAP
+```
+ssh negrume@GROO
+```
+
 ## Publicar container docker WEB
 ```
 docker run --rm --network edge --dns 8.8.8.8 \

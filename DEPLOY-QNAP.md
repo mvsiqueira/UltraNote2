@@ -182,6 +182,26 @@ https://groo.myqnapcloud.com:8443/ultranote                → login Google (via
 > Como rodamos imagens oficiais com os arquivos **montados**, não há build de imagem — a
 > atualização é só publicar de novo + reiniciar.
 
+## Atualizar o cloudflared
+
+O `cloudflared` roda com `--no-autoupdate` e a imagem fica **fixada numa versão** em
+`../qnap-test-site/docker-compose.cloudflared.yml` (hoje `2026.10.3`) — com `latest`, reiniciar
+ou recriar o container reaproveitaria a imagem já baixada no NAS e ele ficaria preso numa versão
+antiga sem ninguém perceber. Pra subir de versão:
+
+1. Trocar a tag no YAML (e na cópia colada no Container Station).
+2. Via SSH no NAS: `docker pull cloudflare/cloudflared:<nova-tag>`.
+3. Container Station → recriar a aplicação `cloudflared` (todos os apps ficam alguns segundos
+   fora do ar — é uma instância só).
+4. Conferir: `docker exec qnap-cloudflared cloudflared --version`.
+
+> **Out/2026 — eMudhra:** a Cloudflare avisou que versões anteriores à `2026.10.2` ainda
+> confiam em 8 certificados intermediários da eMudhra (emSign) com chaves fracas, então
+> qualquer um poderia forjar certificados. Atualizar é obrigatório. Antes de subir, confira no
+> painel se alguma rota aponta pra origem `https://` — as do UltraNote são `http://` dentro da
+> rede `edge`, então não são afetadas. Nunca "resolva" erro de certificado desligando a
+> verificação (`noTLSVerify`).
+
 ## Notas
 
 - **`ports:` só em `127.0.0.1`** (8543, só a web) — pro proxy reverso do QTS (§7, acesso via
